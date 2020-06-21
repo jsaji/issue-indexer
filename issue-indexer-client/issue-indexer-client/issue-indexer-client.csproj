@@ -5,4 +5,8 @@
     <RootNamespace>issue_indexer_client</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="bootstrap" Version="4.5.0" />
+  </ItemGroup>
+
 </Project>
