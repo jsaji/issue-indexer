@@ -1,0 +1,8 @@
+## Project information related to VS
+*.suo
+*.user
+_ReSharper.*
+.vs
+bin
+obj
+packages
