@@ -8,7 +8,7 @@ namespace issue_indexer_server.Models
 {
     public class Ticket
     {
-        public string Id { get; set; }
+        public uint Id { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
         [DataType(DataType.Date)]
@@ -17,8 +17,8 @@ namespace issue_indexer_server.Models
         public DateTime ModifiedOn { get; set; }
         public string Status { get; set; }
         public string Type { get; set; }
-        public string SubmittedBy { get; set; }
-        public string AssignedTo { get; set; }
-        public string ProjectId { get; set; }
+        public uint SubmittedBy { get; set; }
+        public uint AssignedTo { get; set; }
+        public uint ProjectId { get; set; }
     }
 }

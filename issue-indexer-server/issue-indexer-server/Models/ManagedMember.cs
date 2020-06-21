@@ -7,8 +7,9 @@ namespace issue_indexer_server.Models
 {
     public class ManagedMember
     {
-        public string UserId { get; set; }
-        public string ManagerId { get; set; }
-        public string AdminId { get; set; }
+        public uint Id { get; set; }
+        public uint UserId { get; set; }
+        public uint ManagerId { get; set; }
+        public uint AdminId { get; set; }
     }
 }

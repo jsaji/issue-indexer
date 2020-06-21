@@ -7,6 +7,6 @@ namespace issue_indexer_server.Models
 {
     public class Admin
     {
-        public string Id { get; set; }
+        public uint Id { get; set; }
     }
 }

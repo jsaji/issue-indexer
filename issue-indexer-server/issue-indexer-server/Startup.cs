@@ -10,6 +10,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using issue_indexer_server.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace issue_indexer_server
 {
@@ -25,6 +27,9 @@ namespace issue_indexer_server
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddDbContext<IssueIndexerContext>(
+                options => options.UseInMemoryDatabase("IssueIndexer")
+            );
             services.AddControllers();
         }
 
