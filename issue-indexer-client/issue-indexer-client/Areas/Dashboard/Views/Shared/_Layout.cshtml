@@ -8,10 +8,11 @@
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
 <body>
+    <!---->
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Issue Indexer</a>
+                <a class="navbar-brand" asp-area="Dashboard" asp-controller="Main" asp-action="Index">Issue Indexer</a>
                 <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -19,25 +20,45 @@
                 <div class="navbar-collapse collapse d-sm-inline-flex flex-sm-row-reverse">
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                            <a class="nav-link text-dark" asp-area="Dashboard" asp-controller="Main" asp-action="Index">Home</a>
                         </li>
                     </ul>
                 </div>
             </div>
         </nav>
     </header>
+
+    <div class="sidenav">
+        <ul class="nav">
+            <li class="nav-item">
+                <a href="#">Home</a>
+            </li>
+            <li class="nav-item">
+                <a href="#">Home</a>
+            </li>
+            <li class="nav-item">
+                <a href="#">Home</a>
+            </li>
+        </ul>
+        <h3>start of something new</h3>
+        <a href="#">Home</a>
+        <a href="#">My Projects</a>
+        <a href="#">My Tickets</a>
+        <a href="#">My Account</a>
+    </div>
+
     <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
+        <div class="main">
+            <main role="main" class="pb-3">
+                @RenderBody()
+            </main>
+        </div>
+
     </div>
 
     <footer class="border-top footer text-muted">
         <div class="container">
-            &copy; 2020 - Issue Indexer - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            &copy; 2020 - issue_indexer_client - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
@@ -46,3 +67,4 @@
     @RenderSection("Scripts", required: false)
 </body>
 </html>
+

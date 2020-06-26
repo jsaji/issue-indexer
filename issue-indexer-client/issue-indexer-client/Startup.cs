@@ -49,6 +49,9 @@ namespace issue_indexer_client
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllerRoute(
+                    name: "Dashboard",
+                    pattern: "{area:exists}/{controller=Main}/{action=Index}/{id?}");
+                endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");
             });
