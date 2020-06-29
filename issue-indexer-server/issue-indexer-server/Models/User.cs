@@ -1,20 +1,28 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace issue_indexer_server.Models
 {
     public class User
     {
         public uint Id { get; set; }
-        public string FName { get; set; }
-        public string LName { get; set; }
-        [DataType(DataType.EmailAddress)]
+
+        [Required(ErrorMessage = "First name field is required for User")]
+        [StringLength(50, ErrorMessage = "First name cannot be longer than 50 characters")]
+        public string FirstName { get; set; }
+
+        [Required(ErrorMessage = "Last name field is required for User")]
+        [StringLength(50, ErrorMessage = "Last name cannot be longer than 50 characters")]
+        public string LastName { get; set; }
+
+        [Required(ErrorMessage = "Email address field is required for User")]
+        [EmailAddress(ErrorMessage = "Invalid email address")]
         public string Email { get; set; }
-        public byte AccountType { get; set; }
-        [DataType(DataType.Date)]
+
+        [Required(ErrorMessage = "Joined On field is required for User")]
         public DateTime JoinedOn { get; set; }
+
+        [Required(ErrorMessage = "Account Type field is required for User")]
+        public byte AccountType { get; set; }
     }
 }
