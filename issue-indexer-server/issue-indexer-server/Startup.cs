@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using issue_indexer_server.Models;
+using issue_indexer_server.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace issue_indexer_server
