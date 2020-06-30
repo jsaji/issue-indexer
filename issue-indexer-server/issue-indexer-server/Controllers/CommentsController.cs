@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using issue_indexer_server.Models;
+using issue_indexer_server.Data;
 
 namespace issue_indexer_server.Controllers
 {
@@ -79,6 +80,7 @@ namespace issue_indexer_server.Controllers
         [HttpPost]
         public async Task<ActionResult<Comment>> PostComment(Comment comment)
         {
+            comment.CommentedOn = DateTime.UtcNow;
             _context.Comments.Add(comment);
             await _context.SaveChangesAsync();
 

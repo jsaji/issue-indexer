@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using issue_indexer_server.Models;
+using SQLitePCL;
+using Microsoft.AspNetCore.Http.Features;
+using issue_indexer_server.Data;
 
 namespace issue_indexer_server.Controllers
 {
@@ -22,9 +25,59 @@ namespace issue_indexer_server.Controllers
 
         // GET: api/Projects
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Project>>> GetProjects()
+        public async Task<ActionResult<IEnumerable<ProjectDTO>>> GetProjects(uint? id, bool? getManaged)
         {
-            return await _context.Projects.ToListAsync();
+            if (id.HasValue)
+            {
+                if(getManaged.HasValue && (bool) getManaged)
+                {
+                    return await GetByUserIdAndAccountType((uint)id);
+                } else
+                {
+                    return await GetByUserId((uint)id);
+                }
+            }
+            else return await _context.Projects.Select(x => ItemToDTO(x)).ToListAsync();
+        }
+
+        private async Task<ActionResult<IEnumerable<ProjectDTO>>> GetByUserIdAndAccountType(uint userId)
+        {
+            // Gets the user from the Db and casts as User object
+            var user = await _context.Users.FindAsync(userId);
+
+            // If the accountType is 1 (i.e. manager), it gets all the projects managed by this user
+            // else, if it's 2 (i.e. admin), it gets all projects managed by managers that the admin oversees
+            List<ProjectDTO> query = null;
+            if (user.AccountType == 1)
+            {
+                query = await (from p in _context.Projects
+                                where p.ManagerId == userId
+                                select p as ProjectDTO).ToListAsync();
+            }
+            else if (user.AccountType == 2)
+            {
+                query = await (from p in _context.Projects
+                                join mm in _context.ManagedMembers
+                                on p.ManagerId equals mm.ManagerId
+                                where (mm.AdminId == userId || p.ManagerId == userId)
+                                select p as ProjectDTO).ToListAsync();
+            }
+            if (query != null && query.Count>0)
+            {
+                return (ActionResult<IEnumerable<ProjectDTO>>)Activator.CreateInstance(typeof(ActionResult<IEnumerable<ProjectDTO>>), query);
+            }
+            else return NotFound();
+        }
+
+        private async Task<ActionResult<IEnumerable<ProjectDTO>>> GetByUserId(uint userId)
+        {
+            // Gets the projects where a user is a team member
+            var query = await (from p in _context.Projects
+                           join pm in _context.ProjectMembers
+                           on p.Id equals pm.ProjectId
+                           where pm.UserId == userId
+                           select p as ProjectDTO).ToListAsync();
+            return (ActionResult<IEnumerable<ProjectDTO>>)Activator.CreateInstance(typeof(ActionResult<IEnumerable<ProjectDTO>>), query);
         }
 
         // GET: api/Projects/5
@@ -79,6 +132,7 @@ namespace issue_indexer_server.Controllers
         [HttpPost]
         public async Task<ActionResult<Project>> PostProject(Project project)
         {
+            project.CreatedOn = DateTime.UtcNow;
             _context.Projects.Add(project);
             await _context.SaveChangesAsync();
 
@@ -105,5 +159,14 @@ namespace issue_indexer_server.Controllers
         {
             return _context.Projects.Any(e => e.Id == id);
         }
+
+        private static ProjectDTO ItemToDTO(Project project) =>
+            new ProjectDTO()
+            {
+                Id = project.Id,
+                Name = project.Name,
+                ManagerId = project.ManagerId,
+                CreatedOn = project.CreatedOn
+            };
     }
 }

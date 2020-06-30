@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using issue_indexer_server.Models;
+using issue_indexer_server.Data;
 
 namespace issue_indexer_server.Controllers
 {
@@ -79,6 +80,9 @@ namespace issue_indexer_server.Controllers
         [HttpPost]
         public async Task<ActionResult<Ticket>> PostTicket(Ticket ticket)
         {
+            ticket.IsDeleted = false;
+            ticket.CreatedOn = DateTime.UtcNow;
+            ticket.LastModifiedOn = DateTime.UtcNow;
             _context.Tickets.Add(ticket);
             await _context.SaveChangesAsync();
 
