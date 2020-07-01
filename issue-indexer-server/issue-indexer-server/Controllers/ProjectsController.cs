@@ -23,61 +23,64 @@ namespace issue_indexer_server.Controllers
             _context = context;
         }
 
-        // GET: api/Projects
+        // GET: api/Projects?id=1&getmanaged=true
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ProjectDTO>>> GetProjects(uint? id, bool? getManaged)
+        public async Task<ActionResult<IEnumerable<ProjectDTO>>> GetProjects(uint? userId, bool? getManaged)
         {
-            if (id.HasValue)
+            if (userId.HasValue)
             {
-                if(getManaged.HasValue && (bool) getManaged)
+                var user = await _context.Users.FindAsync(userId);
+                if (user == null) return NotFound();
+
+                if (user.AccountType != 0 && getManaged.HasValue && (bool) getManaged)
                 {
-                    return await GetByUserIdAndAccountType((uint)id);
+                    return await GetByUserIdAndAccountType(user);
                 } else
                 {
-                    return await GetByUserId((uint)id);
+                    return await GetByUserId(user);
                 }
             }
-            else return await _context.Projects.Select(x => ItemToDTO(x)).ToListAsync();
+            // return NotFound();
+            return await _context.Projects.Select(x => Functions.ProjectToDTO(x)).ToListAsync();
         }
 
-        private async Task<ActionResult<IEnumerable<ProjectDTO>>> GetByUserIdAndAccountType(uint userId)
+        private async Task<ActionResult<IEnumerable<ProjectDTO>>> GetByUserIdAndAccountType(User user)
         {
-            // Gets the user from the Db and casts as User object
-            var user = await _context.Users.FindAsync(userId);
-
             // If the accountType is 1 (i.e. manager), it gets all the projects managed by this user
             // else, if it's 2 (i.e. admin), it gets all projects managed by managers that the admin oversees
-            List<ProjectDTO> query = null;
+            List<ProjectDTO> projects = null;
             if (user.AccountType == 1)
             {
-                query = await (from p in _context.Projects
-                                where p.ManagerId == userId
+                projects = await (from p in _context.Projects
+                                where p.ManagerId == user.Id
                                 select p as ProjectDTO).ToListAsync();
             }
             else if (user.AccountType == 2)
             {
-                query = await (from p in _context.Projects
+                projects = await (from p in _context.Projects
                                 join mm in _context.ManagedMembers
                                 on p.ManagerId equals mm.ManagerId
-                                where (mm.AdminId == userId || p.ManagerId == userId)
+                                where (mm.AdminId == user.Id || p.ManagerId == user.Id)
                                 select p as ProjectDTO).ToListAsync();
             }
+            /*
             if (query != null && query.Count>0)
             {
-                return (ActionResult<IEnumerable<ProjectDTO>>)Activator.CreateInstance(typeof(ActionResult<IEnumerable<ProjectDTO>>), query);
-            }
-            else return NotFound();
+                return query;
+            }*/
+            return projects;
+            //else return NotFound();
         }
 
-        private async Task<ActionResult<IEnumerable<ProjectDTO>>> GetByUserId(uint userId)
+        private async Task<ActionResult<IEnumerable<ProjectDTO>>> GetByUserId(User user)
         {
             // Gets the projects where a user is a team member
-            var query = await (from p in _context.Projects
+            var projects = await (from p in _context.Projects
                            join pm in _context.ProjectMembers
                            on p.Id equals pm.ProjectId
-                           where pm.UserId == userId
+                           where pm.UserId == user.Id
                            select p as ProjectDTO).ToListAsync();
-            return (ActionResult<IEnumerable<ProjectDTO>>)Activator.CreateInstance(typeof(ActionResult<IEnumerable<ProjectDTO>>), query);
+            return projects;
         }
 
         // GET: api/Projects/5
@@ -159,14 +162,5 @@ namespace issue_indexer_server.Controllers
         {
             return _context.Projects.Any(e => e.Id == id);
         }
-
-        private static ProjectDTO ItemToDTO(Project project) =>
-            new ProjectDTO()
-            {
-                Id = project.Id,
-                Name = project.Name,
-                ManagerId = project.ManagerId,
-                CreatedOn = project.CreatedOn
-            };
     }
 }
