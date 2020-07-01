@@ -13,8 +13,8 @@ namespace issue_indexer_server.Models
         [Required(ErrorMessage = "User ID field is required for Comments")]
         public uint UserId { get; set; }
 
-        [Required(ErrorMessage = "Project ID field is required for Comments")]
-        public uint ProjectId { get; set; }
+        [Required(ErrorMessage = "Ticket ID field is required for Comments")]
+        public uint TicketId { get; set; }
 
         [Required(ErrorMessage = "Edited field is required for Comments")]
         public bool Edited { get; set; }

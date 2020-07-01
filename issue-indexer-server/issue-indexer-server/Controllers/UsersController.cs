@@ -21,49 +21,71 @@ namespace issue_indexer_server.Controllers
             _context = context;
         }
 
-        // GET: api/Users?
+        // GET: api/Users?userId=1&superiors=true -> returns a user's superiors
+        // or api/Users?userId=1 -> returns a user's inferiors
+        // or api/Users?projectId=1 -> returns users that are members of a project
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserDTO>>> GetUsers(uint? userId, bool? superiors)
+        public async Task<ActionResult<IEnumerable<UserDTO>>> GetUsers(uint? userId, bool? superiors, uint? projectId)
         {
             if (userId.HasValue)
             {
                 var user = await _context.Users.FindAsync(userId);
                 if (user == null) return NotFound();
 
-                if (superiors.HasValue && (bool)superiors) return await GetSuperiors(user);
-                else return await GetInferiors(user);
+                if (superiors.HasValue && (bool)superiors) return await GetSuperiors(user.Id, user.AccountType);
+                else return await GetInferiors(user.Id, user.AccountType);
+            } else if (projectId.HasValue)
+            {
+                bool projectExists = await _context.Projects.AnyAsync(p => p.Id == projectId);
+                if (!projectExists) return NotFound();
+
+                return await GetProjectMembers((uint)projectId);
             }
             
             // return NotFound();
             return await _context.Users.Select(x => Functions.UserToDTO(x)).ToListAsync();
         }
 
-        private async Task<ActionResult<IEnumerable<UserDTO>>> GetInferiors(User user)
+        private async Task<ActionResult<IEnumerable<UserDTO>>> GetProjectMembers(uint projectId)
+        {
+            List<UserDTO> users = null;
+            
+            users = await (from u in _context.Users
+                           join pm in _context.ProjectMembers
+                           on u.Id equals pm.UserId
+                            where pm.ProjectId == projectId
+                            select u as UserDTO).ToListAsync();
+
+            if (users != null) return users;
+            else return NotFound();
+        }
+
+        private async Task<ActionResult<IEnumerable<UserDTO>>> GetInferiors(uint userId, byte accountType)
         {
             List<UserDTO> inferiors = null;
-            if (user.AccountType == 1)
+            if (accountType == 1)
             {
                 // Gets users that the manager has added
                 inferiors = await (from u in _context.Users
                                join mm in _context.ManagedMembers
                                on u.Id equals mm.UserId
-                               where mm.ManagerId == user.Id
+                               where mm.ManagerId == userId
                                select u as UserDTO).ToListAsync();
             }
-            else if (user.AccountType == 2)
+            else if (accountType == 2)
             {
                 // Gets users that the Admin has 'added'
                 var users = await (from u in _context.Users
                                join mm in _context.ManagedMembers
                                on u.Id equals mm.UserId
-                               where mm.ManagerId == user.Id || mm.AdminId == user.Id
+                               where mm.ManagerId == userId || mm.AdminId == userId
                                select u as UserDTO).ToListAsync();
 
                 // Gets managers the Admin has 'added'
                 var managers = await (from u in _context.Users
                                       join mm in _context.ManagedMembers
                                       on u.Id equals mm.ManagerId
-                                      where mm.AdminId == user.Id
+                                      where mm.AdminId == userId
                                       select u as UserDTO).ToListAsync();
 
                 // Gets users that the Admin's managers have 'added'
@@ -85,22 +107,22 @@ namespace issue_indexer_server.Controllers
             return inferiors;
         }
 
-        private async Task<ActionResult<IEnumerable<UserDTO>>> GetSuperiors(User user)
+        private async Task<ActionResult<IEnumerable<UserDTO>>> GetSuperiors(uint userId, byte accountType)
         {
             List<UserDTO> superiors = null;
-            if (user.AccountType == 0)
+            if (accountType == 0)
             {
                 // If the user is a normal user, it gets associated managers and admins
                 var managers = await (from u in _context.Users
                                       join mm in _context.ManagedMembers
                                       on u.Id equals mm.ManagerId
-                                      where mm.UserId == user.Id
+                                      where mm.UserId == userId
                                       select u as UserDTO).Distinct().ToListAsync();
 
                 var admins = await (from u in _context.Users
                                     join mm in _context.ManagedMembers
                                     on u.Id equals mm.AdminId
-                                    where mm.UserId == user.Id
+                                    where mm.UserId == userId
                                     select u as UserDTO).Distinct().ToListAsync();
 
                 HashSet<uint> managerids = new HashSet<uint>(from m in managers
@@ -113,13 +135,13 @@ namespace issue_indexer_server.Controllers
                                   select u as UserDTO).ToListAsync();
 
                 superiors = managers.Concat(admins).Concat(misc).Distinct().OrderBy(user => user.FirstName).ToList();
-            } else if (user.AccountType == 1)
+            } else if (accountType == 1)
             {
                 // If the user is a manager, it gets admins
                 superiors = await (from u in _context.Users
                                     join mm in _context.ManagedMembers
                                     on u.Id equals mm.AdminId
-                                    where mm.ManagerId == user.Id || mm.UserId == user.Id
+                                    where mm.ManagerId == userId || mm.UserId == userId
                                     select u as UserDTO).ToListAsync();
             } else
             {

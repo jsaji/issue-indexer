@@ -14,9 +14,6 @@ namespace issue_indexer_server.Models
         [Required(ErrorMessage = "Created On field is required for Ticket")]
         public DateTime CreatedOn { get; set; }
 
-        [Required(ErrorMessage = "Last Modified On field is required for Ticket")]
-        public DateTime LastModifiedOn { get; set; }
-
         [Required(ErrorMessage = "Status field is required for Ticket")]
         [StringLength(15, ErrorMessage = "Status cannot be longer than 15 characters")]
         public string Status { get; set; }

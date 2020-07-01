@@ -23,8 +23,19 @@ namespace issue_indexer_server.Controllers
 
         // GET: api/Comments
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Comment>>> GetComments()
+        public async Task<ActionResult<IEnumerable<Comment>>> GetComments(uint? ticketId)
         {
+            List<Comment> comments = null;
+            if (ticketId.HasValue)
+            {
+                bool ticketExists = await _context.Tickets.AnyAsync(t => t.Id == ticketId);
+                if (!ticketExists) return NotFound();
+                comments = await (from c in _context.Comments
+                                  where c.TicketId == ticketId
+                                  select c).ToListAsync();
+            }
+            if (comments != null) return comments;
+            //else return NotFound();
             return await _context.Comments.ToListAsync();
         }
 

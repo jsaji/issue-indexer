@@ -23,8 +23,19 @@ namespace issue_indexer_server.Controllers
 
         // GET: api/TicketHistories
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<TicketHistory>>> GetTicketHistory()
+        public async Task<ActionResult<IEnumerable<TicketHistory>>> GetTicketHistory(uint? ticketId)
         {
+            List<TicketHistory> ticketHistory = null;
+            if (ticketId.HasValue)
+            {
+                bool ticketExists = await _context.Tickets.AnyAsync(t => t.Id == ticketId);
+                if (!ticketExists) return NotFound();
+                ticketHistory = await (from h in _context.TicketHistory
+                                  where h.TicketId == ticketId
+                                  select h).ToListAsync();
+            }
+            if (ticketHistory != null) return ticketHistory;
+            //else return NotFound();
             return await _context.TicketHistory.ToListAsync();
         }
 

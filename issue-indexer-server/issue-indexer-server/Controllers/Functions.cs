@@ -30,7 +30,6 @@ namespace issue_indexer_server.Controllers
                 Name = ticket.Name,
                 AssignedTo = ticket.AssignedTo,
                 CreatedOn = ticket.CreatedOn,
-                LastModifiedOn = ticket.LastModifiedOn,
                 SubmittedBy = ticket.SubmittedBy
             };
     }

@@ -16,6 +16,9 @@ namespace issue_indexer_server.Models
         [StringLength(10, ErrorMessage = "Priority cannot be longer than 10 characters")]
         public string Priority { get; set; }
 
+        [Required(ErrorMessage = "Last Modified On field is required for Ticket")]
+        public DateTime LastModifiedOn { get; set; }
+
         [Required(ErrorMessage = "Is Deleted field is required for Ticket")]
         public bool IsDeleted { get; set; }
 

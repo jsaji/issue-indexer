@@ -23,8 +23,20 @@ namespace issue_indexer_server.Controllers
 
         // GET: api/Tickets
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Ticket>>> GetTickets()
+        public async Task<ActionResult<IEnumerable<TicketDTO>>> GetTickets(uint? projectId)
         {
+            List<TicketDTO> tickets = null;
+            if (projectId.HasValue)
+            {
+                bool projectExists = await _context.Projects.AnyAsync(p => p.Id == projectId);
+                if (!projectExists) return NotFound();
+
+                tickets = await (from t in _context.Tickets
+                                     where t.ProjectId == projectId
+                                     select t as TicketDTO).ToListAsync();
+            }
+            if (tickets != null) return tickets;
+            //else return NotFound();
             return await _context.Tickets.ToListAsync();
         }
 
