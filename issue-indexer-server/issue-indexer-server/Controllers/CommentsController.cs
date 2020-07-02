@@ -33,9 +33,9 @@ namespace issue_indexer_server.Controllers
                 comments = await (from c in _context.Comments
                                   where c.TicketId == ticketId
                                   select c).ToListAsync();
+                return comments;
             }
-            if (comments != null) return comments;
-            //else return NotFound();
+            // return NotFound();
             return await _context.Comments.ToListAsync();
         }
 
@@ -44,11 +44,7 @@ namespace issue_indexer_server.Controllers
         public async Task<ActionResult<Comment>> GetComment(uint id)
         {
             var comment = await _context.Comments.FindAsync(id);
-
-            if (comment == null)
-            {
-                return NotFound();
-            }
+            if (comment == null) return NotFound();
 
             return comment;
         }
@@ -59,10 +55,7 @@ namespace issue_indexer_server.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutComment(uint id, Comment comment)
         {
-            if (id != comment.Id)
-            {
-                return BadRequest();
-            }
+            if (id != comment.Id) return BadRequest();
 
             _context.Entry(comment).State = EntityState.Modified;
 
@@ -72,14 +65,8 @@ namespace issue_indexer_server.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!CommentExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                if (!CommentExists(id)) return NotFound();
+                else throw;
             }
 
             return NoContent();
@@ -103,10 +90,7 @@ namespace issue_indexer_server.Controllers
         public async Task<ActionResult<Comment>> DeleteComment(uint id)
         {
             var comment = await _context.Comments.FindAsync(id);
-            if (comment == null)
-            {
-                return NotFound();
-            }
+            if (comment == null) return NotFound();
 
             _context.Comments.Remove(comment);
             await _context.SaveChangesAsync();

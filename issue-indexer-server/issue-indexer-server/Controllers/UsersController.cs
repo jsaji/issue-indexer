@@ -39,7 +39,7 @@ namespace issue_indexer_server.Controllers
                 bool projectExists = await _context.Projects.AnyAsync(p => p.Id == projectId);
                 if (!projectExists) return NotFound();
 
-                return await GetProjectMembers((uint)projectId);
+                return await GetProjectMembers(projectId.Value);
             }
             
             // return NotFound();

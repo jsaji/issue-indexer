@@ -19,9 +19,6 @@ namespace issue_indexer_server.Models
         [Required(ErrorMessage = "Last Modified On field is required for Ticket")]
         public DateTime LastModifiedOn { get; set; }
 
-        [Required(ErrorMessage = "Is Deleted field is required for Ticket")]
-        public bool IsDeleted { get; set; }
-
         [Required(ErrorMessage = "Project ID field is required for Ticket")]
         public uint ProjectId { get; set; }
     }

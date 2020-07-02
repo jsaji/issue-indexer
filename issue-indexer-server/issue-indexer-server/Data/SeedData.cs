@@ -61,7 +61,7 @@ namespace issue_indexer_server.Data
                     new Project
                     {
                         Name = "personal project",
-                        ManagerId = 3,
+                        ManagerId = 0,
                         CreatedOn = DateTime.UtcNow,
                         Description = "2 personal",
                         CreatorId = 3
@@ -117,6 +117,32 @@ namespace issue_indexer_server.Data
                     {
                         ManagerId = 2,
                         AdminId = 1
+                    }
+                );
+                context.Tickets.AddRange(
+                    new Ticket
+                    {
+                        Name = "Major bug lol",
+                        Description = "Yyeee",
+                        Status = "Open",
+                        SubmittedBy = 3,
+                        Type = "Bug fix",
+                        Priority = "High",
+                        CreatedOn = DateTime.UtcNow,
+                        LastModifiedOn = DateTime.UtcNow,
+                        ProjectId = 1
+                    },
+                    new Ticket
+                    {
+                        Name = "Major bug3 bad",
+                        Description = "v bad",
+                        Status = "WORK DAMMIT",
+                        SubmittedBy = 3,
+                        Type = "Bug fix",
+                        Priority = "Medium",
+                        CreatedOn = DateTime.UtcNow,
+                        LastModifiedOn = DateTime.UtcNow,
+                        ProjectId = 1
                     }
                 );
                 context.SaveChanges();

@@ -22,5 +22,8 @@ namespace issue_indexer_server.Models
         public uint SubmittedBy { get; set; }
 
         public uint AssignedTo { get; set; }
+
+        [Required(ErrorMessage = "Is Deleted field is required for Ticket")]
+        public bool IsDeleted { get; set; }
     }
 }

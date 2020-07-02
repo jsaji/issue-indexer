@@ -20,7 +20,8 @@ namespace issue_indexer_server.Controllers
                 Id = project.Id,
                 Name = project.Name,
                 ManagerId = project.ManagerId,
-                CreatedOn = project.CreatedOn
+                CreatedOn = project.CreatedOn,
+                IsDeleted = project.IsDeleted
             };
 
         public static TicketDTO TicketToDTO(Ticket ticket) =>
@@ -28,9 +29,11 @@ namespace issue_indexer_server.Controllers
             {
                 Id = ticket.Id,
                 Name = ticket.Name,
-                AssignedTo = ticket.AssignedTo,
                 CreatedOn = ticket.CreatedOn,
-                SubmittedBy = ticket.SubmittedBy
+                Status = ticket.Status,
+                AssignedTo = ticket.AssignedTo,
+                SubmittedBy = ticket.SubmittedBy,
+                IsDeleted = ticket.IsDeleted
             };
     }
 }

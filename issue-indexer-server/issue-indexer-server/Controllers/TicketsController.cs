@@ -37,7 +37,7 @@ namespace issue_indexer_server.Controllers
             }
             if (tickets != null) return tickets;
             //else return NotFound();
-            return await _context.Tickets.ToListAsync();
+            return await _context.Tickets.Select(t => Functions.TicketToDTO(t)).ToListAsync();
         }
 
         // GET: api/Tickets/5
