@@ -53,6 +53,22 @@ namespace issue_indexer_server.Controllers
             var addedMembers = await DetermineMembers(projectMembers);
             if (addedMembers == null) return BadRequest();
 
+            /*
+            // This code should be shared with the MM Controller
+            var addedMemberIds = (from am in addedMembers select am.UserId).ToList();
+            var project = await _context.Projects.FindAsync(addedMembers[0].ProjectId);
+
+            if (project.ManagerId != 0)
+            {
+                var managedMemberIds = from u in _context.Users
+                                         join mm in _context.ManagedMembers
+                                         on u.Id equals mm.UserId
+                                         where mm.ManagerId == project.ManagerId
+                                         select u.Id;
+                var unmanagedMemberIds = addedMemberIds.Except(managedMemberIds).Distinct().ToList();
+            }
+            */
+
             _context.ProjectMembers.AddRange(addedMembers);
             await _context.SaveChangesAsync();
 

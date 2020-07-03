@@ -37,7 +37,7 @@ namespace issue_indexer_server.Controllers
             }
             if (tickets != null) return tickets;
             //else return NotFound();
-            return await _context.Tickets.Select(t => Functions.TicketToDTO(t)).ToListAsync();
+            return await _context.Tickets.Select(t => (TicketDTO)t).ToListAsync();
         }
 
         // GET: api/Tickets/5
@@ -54,35 +54,55 @@ namespace issue_indexer_server.Controllers
             return ticket;
         }
 
-        // PUT: api/Tickets/5
+        // PUT: api/Tickets/5?userId=3
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutTicket(uint id, Ticket ticket)
+        [HttpPut("{ticketId}")]
+        public async Task<IActionResult> PutTicket(uint ticketId, Ticket updatedTicket, uint? userId)
         {
-            if (id != ticket.Id)
-            {
-                return BadRequest();
-            }
+            if (!userId.HasValue) return BadRequest();
+            if (ticketId != updatedTicket.Id) return BadRequest();
 
-            _context.Entry(ticket).State = EntityState.Modified;
+            User editor = await _context.Users.FindAsync(userId);
+            Ticket originalTicket = await _context.Tickets.FindAsync(updatedTicket.Id);
+            if (originalTicket == null || editor == null) return NotFound();
 
             try
             {
-                await _context.SaveChangesAsync();
+                // If the ticket is "deleted" or "undeleted", it applies the soft delete and does not change any other fields
+                if (originalTicket.IsDeleted != updatedTicket.IsDeleted) await SoftDeleteTicket(originalTicket, updatedTicket.IsDeleted, userId.Value);
+                else await EditTicketFields(originalTicket, updatedTicket, userId.Value);
+                return NoContent();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (Exception e)
             {
-                if (!TicketExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return new StatusCodeResult(StatusCodes.Status500InternalServerError);
             }
+        }
 
+        private async Task<IActionResult> EditTicketFields(Ticket originalTicket, Ticket updatedTicket, uint editorId)
+        {
+            originalTicket.Name = updatedTicket.Name;
+            originalTicket.Description = updatedTicket.Description;
+            originalTicket.AssignedTo = updatedTicket.AssignedTo;
+            originalTicket.Priority = updatedTicket.Priority;
+            originalTicket.Status = updatedTicket.Status;
+            originalTicket.Type = updatedTicket.Type;
+            originalTicket.LastModifiedOn = DateTime.UtcNow;
+            originalTicket.Status = updatedTicket.Status;
+            TicketHistory ticketHistory = Functions.TicketToHistory(originalTicket, editorId, "edit");
+
+            _context.TicketHistory.Add(ticketHistory);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        private async Task<IActionResult> SoftDeleteTicket(Ticket originalTicket, bool softDelete, uint editorId)
+        {
+            originalTicket.IsDeleted = softDelete;
+            TicketHistory ticketHistory = Functions.TicketToHistory(originalTicket, editorId, "delete");
+            _context.TicketHistory.Add(ticketHistory);
+            await _context.SaveChangesAsync();
             return NoContent();
         }
 
@@ -90,11 +110,17 @@ namespace issue_indexer_server.Controllers
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPost]
-        public async Task<ActionResult<Ticket>> PostTicket(Ticket ticket)
+        public async Task<ActionResult<Ticket>> PostTicket(Ticket ticket, uint? userId)
         {
+            if (!userId.HasValue) return BadRequest();
+            // maybe check if user exists here
+
             ticket.IsDeleted = false;
             ticket.CreatedOn = DateTime.UtcNow;
             ticket.LastModifiedOn = DateTime.UtcNow;
+            TicketHistory ticketHistory = Functions.TicketToHistory(ticket, userId.Value, "create");
+
+            _context.TicketHistory.Add(ticketHistory);
             _context.Tickets.Add(ticket);
             await _context.SaveChangesAsync();
 
@@ -102,16 +128,22 @@ namespace issue_indexer_server.Controllers
         }
 
         // DELETE: api/Tickets/5
-        [HttpDelete("{id}")]
-        public async Task<ActionResult<Ticket>> DeleteTicket(uint id)
+        [HttpDelete("{ticketId}")]
+        public async Task<ActionResult<Ticket>> DeleteTicket(uint ticketId)
         {
-            var ticket = await _context.Tickets.FindAsync(id);
-            if (ticket == null)
-            {
-                return NotFound();
-            }
+            var ticket = await _context.Tickets.FindAsync(ticketId);
+            if (ticket == null) return NotFound();
+
+            var ticketIds = new List<uint>() { ticketId };
+
+            // Gets history & comments associated with tickets
+            var ticketHistory = await Functions.GetTicketHistory(_context, ticketIds);
+            var comments = await Functions.GetTicketComments(_context, ticketIds);
 
             _context.Tickets.Remove(ticket);
+            _context.TicketHistory.RemoveRange(ticketHistory);
+            _context.Comments.RemoveRange(comments);
+
             await _context.SaveChangesAsync();
 
             return ticket;

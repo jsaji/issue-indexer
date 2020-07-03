@@ -8,7 +8,7 @@ namespace issue_indexer_server.Models
         public uint TicketId { get; set; }
 
         [Required(ErrorMessage = "User ID field is required for Ticket History")]
-        public uint UserId { get; set; }
+        public uint EditorId { get; set; }
 
         [Required(ErrorMessage = "Action field is required for Ticket History")]
         public string Action { get; set; }

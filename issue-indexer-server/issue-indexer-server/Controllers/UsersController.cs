@@ -43,7 +43,7 @@ namespace issue_indexer_server.Controllers
             }
             
             // return NotFound();
-            return await _context.Users.Select(x => Functions.UserToDTO(x)).ToListAsync();
+            return await _context.Users.Select(x => (UserDTO)x).ToListAsync();
         }
 
         private async Task<ActionResult<IEnumerable<UserDTO>>> GetProjectMembers(uint projectId)

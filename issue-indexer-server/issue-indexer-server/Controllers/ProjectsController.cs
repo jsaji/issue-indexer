@@ -44,7 +44,7 @@ namespace issue_indexer_server.Controllers
                 }
             }
             // return NotFound();
-            return await _context.Projects.Select(x => Functions.ProjectToDTO(x)).ToListAsync();
+            return await _context.Projects.Select(x => (ProjectDTO)x).ToListAsync();
         }
 
         private async Task<ActionResult<IEnumerable<ProjectDTO>>> GetByUserIdAndAccountType(uint userId, byte accountType, bool getDeleted)
@@ -101,17 +101,17 @@ namespace issue_indexer_server.Controllers
         [HttpPut("{projectId}")]
         public async Task<IActionResult> PutProject(uint projectId, Project project, uint? userId)
         {
-            if (!userId.HasValue) return BadRequest();
+            //if (!userId.HasValue) return BadRequest();
             if (projectId != project.Id) return BadRequest();
 
             User user = await _context.Users.FindAsync(userId);
             Project original = await _context.Projects.FindAsync(project.Id);
 
-            if (original == null || user == null) return NotFound();
+            if (original == null) return NotFound();
             // Changes are unauthorized if the user is not an admin, or if they're not the project manager
             // or if they're not the creator (provided there is no manager)
-            if (user.AccountType != 2 && (original.ManagerId != user.Id
-                || (original.ManagerId == 0 && original.CreatorId != user.Id))) return Unauthorized();
+            //if (user.AccountType != 2 && (original.ManagerId != user.Id
+             //   || (original.ManagerId == 0 && original.CreatorId != user.Id))) return Unauthorized();
 
             try
             {
@@ -218,15 +218,11 @@ namespace issue_indexer_server.Controllers
             var tickets = await (from t in _context.Tickets
                                  where t.ProjectId == project.Id
                                  select t).ToListAsync();
-            HashSet<uint> ticketIds = new HashSet<uint>(from t in tickets select t.Id);
+            var ticketIds = (from t in tickets select t.Id).ToList();
 
             // Gets history & comments associated with project's tickets
-            var ticketHistory = await (from th in _context.TicketHistory
-                                       where ticketIds.Contains(th.TicketId)
-                                       select th).ToListAsync();
-            var comments = await (from c in _context.Comments
-                                  where ticketIds.Contains(c.TicketId)
-                                  select c).ToListAsync();
+            var ticketHistory = await Functions.GetTicketHistory(_context, ticketIds);
+            var comments = await Functions.GetTicketComments(_context, ticketIds);
 
             // Gets members of project
             var projectMembers = await (from pm in _context.ProjectMembers

@@ -91,6 +91,7 @@ namespace issue_indexer_server.Controllers
         [HttpPost]
         public async Task<ActionResult<TicketHistory>> PostTicketHistory(TicketHistory ticketHistory)
         {
+
             _context.TicketHistory.Add(ticketHistory);
             await _context.SaveChangesAsync();
 
