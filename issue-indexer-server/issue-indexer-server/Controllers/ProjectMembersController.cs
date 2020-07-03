@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using issue_indexer_server.Models;
 using issue_indexer_server.Data;
 using issue_indexer_server.Models.DTO;
+using System.Net;
 
 namespace issue_indexer_server.Controllers
 {
@@ -47,23 +48,11 @@ namespace issue_indexer_server.Controllers
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPost]
-        public async Task<ActionResult<ProjectMember>> PostProjectMember(ProjectMemberList projectMembers)
+        public async Task<ActionResult> PostProjectMember(ProjectMemberList projectMembers)
         {
-            // Basic data check
-            if (projectMembers == null || projectMembers.list.Count == 0) return BadRequest();
+            var addedMembers = await DetermineMembers(projectMembers);
+            if (addedMembers == null) return BadRequest();
 
-            // Illegal operation to assign members between different projects in a single call
-            var projectIds = projectMembers.list.Select(pm => pm.ProjectId).Distinct().ToList();
-            if (projectIds.Count > 1) return BadRequest();
-
-            // Check to only add members who aren't a part of the project already
-            var existingMembers = await (from pm in _context.ProjectMembers
-                                   where pm.ProjectId == projectIds[0]
-                                   select pm).ToListAsync();
-
-            ProjectMemberComparer pmc = new ProjectMemberComparer();
-            var addedMembers = projectMembers.list.Except(existingMembers, pmc).Distinct(pmc).ToList();
-          
             _context.ProjectMembers.AddRange(addedMembers);
             await _context.SaveChangesAsync();
 
@@ -71,19 +60,44 @@ namespace issue_indexer_server.Controllers
         }
 
         // DELETE: api/ProjectMembers/5
-        [HttpDelete("{userId}/{projectId}")]
-        public async Task<ActionResult<ProjectMember>> DeleteProjectMember(uint userId, uint projectId)
+        [HttpDelete]
+        public async Task<ActionResult> DeleteProjectMember(ProjectMemberList projectMembers)
         {
-            var projectMember = await _context.ProjectMembers.FindAsync((userId, projectId));
-            if (projectMember == null)
-            {
-                return NotFound();
-            }
+            var addedMembers = await DetermineMembers(projectMembers, false);
+            if (addedMembers == null) return BadRequest();
 
-            _context.ProjectMembers.Remove(projectMember);
+            _context.ProjectMembers.RemoveRange(addedMembers);
             await _context.SaveChangesAsync();
 
-            return projectMember;
+            return Ok();
+        }
+
+        private async Task<List<ProjectMember>> DetermineMembers(ProjectMemberList projectMembers, bool addMembers=true)
+        {
+            // Basic check
+            if (projectMembers == null || projectMembers.list.Count == 0) return null;
+
+            // Illegal operation to remove members between different projects in a single call
+            var projectIds = projectMembers.list.Select(pm => pm.ProjectId).Distinct().ToList();
+            if (projectIds.Count > 1) return null;
+
+            // Check to only add members who aren't a part of the project already
+            var existingMembers = await (from pm in _context.ProjectMembers
+                                         where pm.ProjectId == projectIds[0]
+                                         select pm).ToListAsync();
+
+            var pmc = new ProjectMemberComparer();
+            var changedMembers = projectMembers.list;
+
+            if (addMembers)
+            {
+                changedMembers = changedMembers.Except(existingMembers, pmc).Distinct(pmc).ToList();
+            } else
+            {
+                changedMembers = changedMembers.Intersect(existingMembers, pmc).Distinct(pmc).ToList();
+            }
+
+            return changedMembers;
         }
 
     }

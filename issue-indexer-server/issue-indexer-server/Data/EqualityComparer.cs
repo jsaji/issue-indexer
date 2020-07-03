@@ -11,7 +11,7 @@ namespace issue_indexer_server.Data
         public int GetHashCode(ProjectMember pm)
         {
             if (pm == null) return 0;
-            return pm.UserId.GetHashCode();
+            return pm.UserId.GetHashCode() ^ pm.ProjectId.GetHashCode();
         }
 
         public bool Equals(ProjectMember pm1, ProjectMember pm2)
