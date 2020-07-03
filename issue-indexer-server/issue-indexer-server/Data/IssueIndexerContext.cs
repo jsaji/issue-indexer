@@ -9,6 +9,12 @@ namespace issue_indexer_server.Data
             : base(options)
         {
         }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<ProjectMember>().HasKey(pm => new { pm.UserId, pm.ProjectId });
+        }
+
         public DbSet<User> Users { get; set; }
         public DbSet<Project> Projects { get; set; }
         public DbSet<Ticket> Tickets { get; set; }

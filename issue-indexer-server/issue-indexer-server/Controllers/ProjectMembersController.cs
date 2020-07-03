@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using issue_indexer_server.Models;
 using issue_indexer_server.Data;
+using issue_indexer_server.Models.DTO;
 
 namespace issue_indexer_server.Controllers
 {
@@ -42,55 +43,38 @@ namespace issue_indexer_server.Controllers
             return projectMember;
         }
 
-        // PUT: api/ProjectMembers/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutProjectMember(uint id, ProjectMember projectMember)
-        {
-            if (id != projectMember.Id)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(projectMember).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ProjectMemberExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
-        }
-
         // POST: api/ProjectMembers
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPost]
-        public async Task<ActionResult<ProjectMember>> PostProjectMember(ProjectMember projectMember)
+        public async Task<ActionResult<ProjectMember>> PostProjectMember(ProjectMemberList projectMembers)
         {
-            _context.ProjectMembers.Add(projectMember);
+            // Basic data check
+            if (projectMembers == null || projectMembers.list.Count == 0) return BadRequest();
+
+            // Illegal operation to assign members between different projects in a single call
+            var projectIds = projectMembers.list.Select(pm => pm.ProjectId).Distinct().ToList();
+            if (projectIds.Count > 1) return BadRequest();
+
+            // Check to only add members who aren't a part of the project already
+            var existingMembers = await (from pm in _context.ProjectMembers
+                                   where pm.ProjectId == projectIds[0]
+                                   select pm).ToListAsync();
+
+            ProjectMemberComparer pmc = new ProjectMemberComparer();
+            var addedMembers = projectMembers.list.Except(existingMembers, pmc).Distinct(pmc).ToList();
+          
+            _context.ProjectMembers.AddRange(addedMembers);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetProjectMember", new { id = projectMember.Id }, projectMember);
+            return StatusCode(201);
         }
 
         // DELETE: api/ProjectMembers/5
-        [HttpDelete("{id}")]
-        public async Task<ActionResult<ProjectMember>> DeleteProjectMember(uint id)
+        [HttpDelete("{userId}/{projectId}")]
+        public async Task<ActionResult<ProjectMember>> DeleteProjectMember(uint userId, uint projectId)
         {
-            var projectMember = await _context.ProjectMembers.FindAsync(id);
+            var projectMember = await _context.ProjectMembers.FindAsync((userId, projectId));
             if (projectMember == null)
             {
                 return NotFound();
@@ -102,9 +86,5 @@ namespace issue_indexer_server.Controllers
             return projectMember;
         }
 
-        private bool ProjectMemberExists(uint id)
-        {
-            return _context.ProjectMembers.Any(e => e.Id == id);
-        }
     }
 }

@@ -168,13 +168,10 @@ namespace issue_indexer_server.Controllers
         // PUT: api/Users/5
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutUser(uint id, User user)
+        [HttpPut("{userId}")]
+        public async Task<IActionResult> PutUser(uint userId, User user)
         {
-            if (id != user.Id)
-            {
-                return BadRequest();
-            }
+            if (userId != user.Id) return BadRequest();
 
             _context.Entry(user).State = EntityState.Modified;
 
@@ -184,7 +181,7 @@ namespace issue_indexer_server.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!UserExists(id))
+                if (!UserExists(userId))
                 {
                     return NotFound();
                 }

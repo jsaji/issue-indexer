@@ -118,8 +118,7 @@ namespace issue_indexer_server.Controllers
                 // If the project is "deleted" or "undeleted", it applies the soft delete and does not change any other fields
                 if (project.IsDeleted != original.IsDeleted) await SoftDeleteProject(original, project.IsDeleted);
                 else if (original.ManagerId != project.ManagerId) await ChangeProjectManager(original, project.ManagerId);
-                else EditProjectFields(original, project);
-                await _context.SaveChangesAsync();
+                else await EditProjectFields(original, project);
                 return NoContent();
             }
             catch (Exception e)
@@ -129,7 +128,7 @@ namespace issue_indexer_server.Controllers
             
         }
 
-        private async Task<IActionResult> ChangeProjectManager(Project original, uint managerId)
+        private async Task<IActionResult> ChangeProjectManager(Project project, uint managerId)
         {
             
             if (managerId != 0)
@@ -140,7 +139,7 @@ namespace issue_indexer_server.Controllers
                 // Gets all current project members
                 HashSet<uint> projectMembers = new HashSet<uint>
                     (await (from pm in _context.ProjectMembers     
-                            where pm.ProjectId == original.Id       
+                            where pm.ProjectId == project.Id       
                             select pm.UserId).ToListAsync());
 
                 // If the individual made manager of the project is a member, add them
@@ -148,16 +147,20 @@ namespace issue_indexer_server.Controllers
                 {
                     ProjectMember newMember = new ProjectMember()
                     {
-                        ProjectId = original.Id,
+                        ProjectId = project.Id,
                         UserId = managerId
                     };
                     _context.ProjectMembers.Add(newMember);
                 }
 
                 // Get all the project members that are not currently 'managed' by the new manager
+                // Ignores any members that are admins or managers
                 var unmanagedUsers = await (from mm in _context.ManagedMembers
-                                 where projectMembers.Contains(mm.UserId) && (mm.ManagerId != manager.Id)
-                                 select mm.UserId).ToListAsync();
+                                            join u in _context.Users
+                                            on mm.UserId equals u.Id
+                                            where projectMembers.Contains(mm.UserId) && (mm.ManagerId != manager.Id)
+                                            && u.AccountType == 0
+                                            select mm.UserId).ToListAsync();
 
                 // If there are any, add records indicating that they are managed by the new manager
                 if (unmanagedUsers != null && unmanagedUsers.Count > 0)
@@ -176,20 +179,18 @@ namespace issue_indexer_server.Controllers
 
             }
 
-            original.ManagerId = managerId;
-            _context.Entry(original).State = EntityState.Modified;
-
+            project.ManagerId = managerId;
+            await _context.SaveChangesAsync();
             return NoContent();
         }
 
-        private IActionResult EditProjectFields(Project original, Project project)
+        private async Task<IActionResult> EditProjectFields(Project project, Project updatedProject)
         {
-            original.Name = project.Name;
-            original.Description = project.Description;
-            original.LeaderId = project.LeaderId;
+            project.Name = updatedProject.Name;
+            project.Description = updatedProject.Description;
+            project.LeaderId = updatedProject.LeaderId;
 
-            _context.Entry(original).State = EntityState.Modified;
-
+            await _context.SaveChangesAsync();
             return NoContent();
         }
 
@@ -252,17 +253,16 @@ namespace issue_indexer_server.Controllers
 
         private async Task<IActionResult> SoftDeleteProject(Project project, bool softDelete)
         {
-            project.IsDeleted = softDelete;
-
+            // Gets tickets associated with the project
             var tickets = await (from t in _context.Tickets
                                  where t.ProjectId == project.Id
                                  select t).ToListAsync();
 
+            // Marks project and tickets as 'deleted'
+            project.IsDeleted = softDelete;
             tickets.ForEach(ticket => ticket.IsDeleted = softDelete);
 
-            _context.Entry(project).State = EntityState.Modified;
-            //_context.Entry(tickets).State = EntityState.Modified;
-
+            await _context.SaveChangesAsync();
             return NoContent();
         }
 
