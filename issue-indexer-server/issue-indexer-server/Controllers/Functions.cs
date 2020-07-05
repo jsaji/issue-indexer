@@ -6,14 +6,12 @@ using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
 
-namespace issue_indexer_server.Controllers
-{
-    public class Functions
-    {
-        public static TicketHistory TicketToHistory(Ticket ticket, uint editorId, string action)
-        {
-            return new TicketHistory()
-            {
+namespace issue_indexer_server.Controllers {
+
+    public class Functions {
+
+        public static TicketHistory TicketToHistory(Ticket ticket, uint editorId, string action) {
+            return new TicketHistory() {
                 Name = ticket.Name,
                 CreatedOn = ticket.CreatedOn,
                 Status = ticket.Status,
@@ -31,16 +29,14 @@ namespace issue_indexer_server.Controllers
             };
         }
 
-        public static async Task<List<TicketHistory>> GetTicketHistory(IssueIndexerContext _context, List<uint> ticketIds)
-        {
+        public static async Task<List<TicketHistory>> GetTicketHistory(IssueIndexerContext _context, List<uint> ticketIds) {
             var ticketHistory = await (from th in _context.TicketHistory
                                        where ticketIds.Contains(th.TicketId)
                                        select th).AsNoTracking().ToListAsync();
             return ticketHistory;
         }
 
-        public static async Task<List<Comment>> GetTicketComments(IssueIndexerContext _context, List<uint> ticketIds)
-        {
+        public static async Task<List<Comment>> GetTicketComments(IssueIndexerContext _context, List<uint> ticketIds) {
             var comments = await (from c in _context.Comments
                                   where ticketIds.Contains(c.TicketId)
                                   select c).AsNoTracking().ToListAsync();

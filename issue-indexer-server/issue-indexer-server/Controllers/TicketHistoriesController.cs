@@ -8,31 +8,28 @@ using Microsoft.EntityFrameworkCore;
 using issue_indexer_server.Models;
 using issue_indexer_server.Data;
 
-namespace issue_indexer_server.Controllers
-{
+namespace issue_indexer_server.Controllers {
+
     [Route("api/[controller]")]
     [ApiController]
-    public class TicketHistoriesController : ControllerBase
-    {
+    public class TicketHistoriesController : ControllerBase {
+
         private readonly IssueIndexerContext _context;
 
-        public TicketHistoriesController(IssueIndexerContext context)
-        {
+        public TicketHistoriesController(IssueIndexerContext context) {
             _context = context;
         }
 
         // GET: api/TicketHistories
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<TicketHistory>>> GetTicketHistory(uint? ticketId)
-        {
+        public async Task<ActionResult<IEnumerable<TicketHistory>>> GetTicketHistory(uint? ticketId) {
             List<TicketHistory> ticketHistory = null;
-            if (ticketId.HasValue)
-            {
+            if (ticketId.HasValue) {
                 bool ticketExists = await _context.Tickets.AnyAsync(t => t.Id == ticketId);
                 if (!ticketExists) return NotFound();
                 ticketHistory = await (from h in _context.TicketHistory
-                                  where h.TicketId == ticketId
-                                  select h).ToListAsync();
+                                       where h.TicketId == ticketId
+                                       select h).ToListAsync();
             }
             if (ticketHistory != null) return ticketHistory;
             //else return NotFound();
@@ -40,46 +37,26 @@ namespace issue_indexer_server.Controllers
         }
 
         // GET: api/TicketHistories/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<TicketHistory>> GetTicketHistory(uint id)
-        {
-            var ticketHistory = await _context.TicketHistory.FindAsync(id);
-
-            if (ticketHistory == null)
-            {
-                return NotFound();
-            }
-
+        [HttpGet("{ticketHistoryId}")]
+        public async Task<ActionResult<TicketHistory>> GetTicketHistory(uint ticketHistoryId) {
+            var ticketHistory = await _context.TicketHistory.FindAsync(ticketHistoryId);
+            if (ticketHistory == null) return NotFound();
             return ticketHistory;
         }
 
         // PUT: api/TicketHistories/5
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutTicketHistory(uint id, TicketHistory ticketHistory)
-        {
-            if (id != ticketHistory.Id)
-            {
-                return BadRequest();
-            }
+        [HttpPut("{ticketHistoryId}")]
+        public async Task<IActionResult> PutTicketHistory(uint ticketHistoryId, TicketHistory ticketHistory) {
+            if (ticketHistoryId != ticketHistory.Id) return BadRequest();
+            if (!TicketHistoryExists(ticketHistoryId)) return NotFound();
+                _context.Entry(ticketHistory).State = EntityState.Modified;
 
-            _context.Entry(ticketHistory).State = EntityState.Modified;
-
-            try
-            {
+            try {
                 await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!TicketHistoryExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+            } catch (Exception) {
+                throw;
             }
 
             return NoContent();
@@ -89,8 +66,7 @@ namespace issue_indexer_server.Controllers
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPost]
-        public async Task<ActionResult<TicketHistory>> PostTicketHistory(TicketHistory ticketHistory)
-        {
+        public async Task<ActionResult<TicketHistory>> PostTicketHistory(TicketHistory ticketHistory) {
 
             _context.TicketHistory.Add(ticketHistory);
             await _context.SaveChangesAsync();
@@ -99,14 +75,10 @@ namespace issue_indexer_server.Controllers
         }
 
         // DELETE: api/TicketHistories/5
-        [HttpDelete("{id}")]
-        public async Task<ActionResult<TicketHistory>> DeleteTicketHistory(uint id)
-        {
-            var ticketHistory = await _context.TicketHistory.FindAsync(id);
-            if (ticketHistory == null)
-            {
-                return NotFound();
-            }
+        [HttpDelete("{ticketHistoryId}")]
+        public async Task<ActionResult<TicketHistory>> DeleteTicketHistory(uint ticketHistoryId) {
+            var ticketHistory = await _context.TicketHistory.FindAsync(ticketHistoryId);
+            if (ticketHistory == null) return NotFound();
 
             _context.TicketHistory.Remove(ticketHistory);
             await _context.SaveChangesAsync();
@@ -114,8 +86,7 @@ namespace issue_indexer_server.Controllers
             return ticketHistory;
         }
 
-        private bool TicketHistoryExists(uint id)
-        {
+        private bool TicketHistoryExists(uint id) {
             return _context.TicketHistory.Any(e => e.Id == id);
         }
     }

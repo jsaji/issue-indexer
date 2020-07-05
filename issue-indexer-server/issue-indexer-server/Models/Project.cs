@@ -1,10 +1,9 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace issue_indexer_server.Models
-{
-    public class Project : ProjectDTO
-    {
+namespace issue_indexer_server.Models {
+
+    public class Project : ProjectDTO {
         [Required(ErrorMessage = "Description field is required for Project")]
         public string Description { get; set; }
 

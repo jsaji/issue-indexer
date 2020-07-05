@@ -14,20 +14,18 @@ using issue_indexer_server.Models;
 using issue_indexer_server.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace issue_indexer_server
-{
-    public class Startup
-    {
-        public Startup(IConfiguration configuration)
-        {
+namespace issue_indexer_server {
+
+    public class Startup {
+
+        public Startup(IConfiguration configuration) {
             Configuration = configuration;
         }
 
         public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
-        public void ConfigureServices(IServiceCollection services)
-        {
+        public void ConfigureServices(IServiceCollection services) {
             services.AddDbContext<IssueIndexerContext>(
                 options => options.UseInMemoryDatabase("IssueIndexer")
             );
@@ -35,10 +33,8 @@ namespace issue_indexer_server
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
-        {
-            if (env.IsDevelopment())
-            {
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env) {
+            if (env.IsDevelopment()) {
                 app.UseDeveloperExceptionPage();
             }
 
@@ -48,8 +44,7 @@ namespace issue_indexer_server
 
             app.UseAuthorization();
 
-            app.UseEndpoints(endpoints =>
-            {
+            app.UseEndpoints(endpoints => {
                 endpoints.MapControllers();
             });
         }

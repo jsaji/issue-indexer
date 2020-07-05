@@ -1,10 +1,9 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace issue_indexer_server.Models
-{
-    public class TicketDTO
-    {
+namespace issue_indexer_server.Models {
+
+    public class TicketDTO {
         public uint Id { get; set; }
 
         [Required(ErrorMessage = "Ticket name field is required for Ticket")]

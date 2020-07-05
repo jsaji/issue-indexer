@@ -1,10 +1,9 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace issue_indexer_server.Models.DTO
-{
-    public class UserDTO
-    {
+namespace issue_indexer_server.Models.DTO {
+
+    public class UserDTO {
         public uint Id { get; set; }
 
         [Required(ErrorMessage = "First name field is required for User")]

@@ -8,26 +8,23 @@ using Microsoft.EntityFrameworkCore;
 using issue_indexer_server.Models;
 using issue_indexer_server.Data;
 
-namespace issue_indexer_server.Controllers
-{
+namespace issue_indexer_server.Controllers {
+
     [Route("api/[controller]")]
     [ApiController]
-    public class CommentsController : ControllerBase
-    {
+    public class CommentsController : ControllerBase {
+
         private readonly IssueIndexerContext _context;
 
-        public CommentsController(IssueIndexerContext context)
-        {
+        public CommentsController(IssueIndexerContext context) {
             _context = context;
         }
 
         // GET: api/Comments
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Comment>>> GetComments(uint? ticketId)
-        {
+        public async Task<ActionResult<IEnumerable<Comment>>> GetComments(uint? ticketId) {
             List<Comment> comments = null;
-            if (ticketId.HasValue)
-            {
+            if (ticketId.HasValue) {
                 bool ticketExists = await _context.Tickets.AnyAsync(t => t.Id == ticketId);
                 if (!ticketExists) return NotFound();
                 comments = await (from c in _context.Comments
@@ -41,8 +38,7 @@ namespace issue_indexer_server.Controllers
 
         // GET: api/Comments/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Comment>> GetComment(uint id)
-        {
+        public async Task<ActionResult<Comment>> GetComment(uint id) {
             var comment = await _context.Comments.FindAsync(id);
             if (comment == null) return NotFound();
 
@@ -53,18 +49,14 @@ namespace issue_indexer_server.Controllers
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutComment(uint id, Comment comment)
-        {
+        public async Task<IActionResult> PutComment(uint id, Comment comment) {
             if (id != comment.Id) return BadRequest();
 
             _context.Entry(comment).State = EntityState.Modified;
 
-            try
-            {
+            try {
                 await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
+            } catch (Exception) {
                 if (!CommentExists(id)) return NotFound();
                 else throw;
             }
@@ -76,8 +68,7 @@ namespace issue_indexer_server.Controllers
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPost]
-        public async Task<ActionResult<Comment>> PostComment(Comment comment)
-        {
+        public async Task<ActionResult<Comment>> PostComment(Comment comment) {
             comment.CommentedOn = DateTime.UtcNow;
             _context.Comments.Add(comment);
             await _context.SaveChangesAsync();
@@ -87,8 +78,7 @@ namespace issue_indexer_server.Controllers
 
         // DELETE: api/Comments/5
         [HttpDelete("{id}")]
-        public async Task<ActionResult<Comment>> DeleteComment(uint id)
-        {
+        public async Task<ActionResult<Comment>> DeleteComment(uint id) {
             var comment = await _context.Comments.FindAsync(id);
             if (comment == null) return NotFound();
 
@@ -98,8 +88,7 @@ namespace issue_indexer_server.Controllers
             return comment;
         }
 
-        private bool CommentExists(uint id)
-        {
+        private bool CommentExists(uint id) {
             return _context.Comments.Any(e => e.Id == id);
         }
     }

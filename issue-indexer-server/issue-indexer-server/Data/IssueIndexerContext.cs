@@ -1,17 +1,15 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using issue_indexer_server.Models;
 
-namespace issue_indexer_server.Data
-{
-    public class IssueIndexerContext : DbContext
-    {
+namespace issue_indexer_server.Data {
+
+    public class IssueIndexerContext : DbContext {
+
         public IssueIndexerContext(DbContextOptions<IssueIndexerContext> options)
-            : base(options)
-        {
+            : base(options) {
         }
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
+        protected override void OnModelCreating(ModelBuilder modelBuilder) {
             modelBuilder.Entity<ProjectMember>().HasKey(pm => new { pm.UserId, pm.ProjectId });
         }
 

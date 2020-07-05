@@ -1,10 +1,9 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace issue_indexer_server.Models
-{
-    public class ProjectDTO
-    {
+namespace issue_indexer_server.Models {
+
+    public class ProjectDTO {
         public uint Id { get; set; }
 
         [Required(ErrorMessage = "Name field is required for Project")]

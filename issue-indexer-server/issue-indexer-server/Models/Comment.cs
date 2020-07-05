@@ -1,10 +1,9 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace issue_indexer_server.Models
-{
-    public class Comment
-    {
+namespace issue_indexer_server.Models {
+
+    public class Comment {
         public uint Id { get; set; }
 
         [Required(ErrorMessage = "Message field is required for Comments")]

@@ -1,10 +1,9 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace issue_indexer_server.Models
-{
-    public class Ticket : TicketDTO
-    {
+namespace issue_indexer_server.Models {
+
+    public class Ticket : TicketDTO {
         [StringLength(500, ErrorMessage = "Ticket description cannot be longer than 500 characters")]
         public string Description { get; set; }
 

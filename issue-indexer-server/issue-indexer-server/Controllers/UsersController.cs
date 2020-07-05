@@ -8,16 +8,15 @@ using issue_indexer_server.Models;
 using issue_indexer_server.Data;
 using issue_indexer_server.Models.DTO;
 
-namespace issue_indexer_server.Controllers
-{
+namespace issue_indexer_server.Controllers {
+
     [Route("api/[controller]")]
     [ApiController]
-    public class UsersController : ControllerBase
-    {
+    public class UsersController : ControllerBase {
+
         private readonly IssueIndexerContext _context;
 
-        public UsersController(IssueIndexerContext context)
-        {
+        public UsersController(IssueIndexerContext context) {
             _context = context;
         }
 
@@ -25,61 +24,53 @@ namespace issue_indexer_server.Controllers
         // or api/Users?userId=1 -> returns a user's inferiors
         // or api/Users?projectId=1 -> returns users that are members of a project
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserDTO>>> GetUsers(uint? userId, bool? superiors, uint? projectId)
-        {
-            if (userId.HasValue)
-            {
+        public async Task<ActionResult<IEnumerable<UserDTO>>> GetUsers(uint? userId, bool? superiors, uint? projectId) {
+            if (userId.HasValue) {
                 var user = await _context.Users.FindAsync(userId);
                 if (user == null) return NotFound();
 
                 if (superiors.HasValue && (bool)superiors) return await GetSuperiors(user.Id, user.AccountType);
                 else return await GetInferiors(user.Id, user.AccountType);
-            } else if (projectId.HasValue)
-            {
+            } else if (projectId.HasValue) {
                 bool projectExists = await _context.Projects.AnyAsync(p => p.Id == projectId);
                 if (!projectExists) return NotFound();
 
                 return await GetProjectMembers(projectId.Value);
             }
-            
+
             // return NotFound();
             return await _context.Users.Select(x => (UserDTO)x).ToListAsync();
         }
 
-        private async Task<ActionResult<IEnumerable<UserDTO>>> GetProjectMembers(uint projectId)
-        {
+        private async Task<ActionResult<IEnumerable<UserDTO>>> GetProjectMembers(uint projectId) {
             List<UserDTO> users = null;
-            
+
             users = await (from u in _context.Users
                            join pm in _context.ProjectMembers
                            on u.Id equals pm.UserId
-                            where pm.ProjectId == projectId
-                            select u as UserDTO).ToListAsync();
+                           where pm.ProjectId == projectId
+                           select u as UserDTO).ToListAsync();
 
             if (users != null) return users;
             else return NotFound();
         }
 
-        private async Task<ActionResult<IEnumerable<UserDTO>>> GetInferiors(uint userId, byte accountType)
-        {
+        private async Task<ActionResult<IEnumerable<UserDTO>>> GetInferiors(uint userId, byte accountType) {
             List<UserDTO> inferiors = null;
-            if (accountType == 1)
-            {
+            if (accountType == 1) {
                 // Gets users that the manager has added
                 inferiors = await (from u in _context.Users
-                               join mm in _context.ManagedMembers
-                               on u.Id equals mm.UserId
-                               where mm.ManagerId == userId
-                               select u as UserDTO).ToListAsync();
-            }
-            else if (accountType == 2)
-            {
+                                   join mm in _context.ManagedMembers
+                                   on u.Id equals mm.UserId
+                                   where mm.ManagerId == userId
+                                   select u as UserDTO).ToListAsync();
+            } else if (accountType == 2) {
                 // Gets users that the Admin has 'added'
                 var users = await (from u in _context.Users
-                               join mm in _context.ManagedMembers
-                               on u.Id equals mm.UserId
-                               where mm.ManagerId == userId || mm.AdminId == userId
-                               select u as UserDTO).ToListAsync();
+                                   join mm in _context.ManagedMembers
+                                   on u.Id equals mm.UserId
+                                   where mm.ManagerId == userId || mm.AdminId == userId
+                                   select u as UserDTO).ToListAsync();
 
                 // Gets managers the Admin has 'added'
                 var managers = await (from u in _context.Users
@@ -89,8 +80,7 @@ namespace issue_indexer_server.Controllers
                                       select u as UserDTO).ToListAsync();
 
                 // Gets users that the Admin's managers have 'added'
-                HashSet<uint> managerids = new HashSet<uint> (from m in managers
-                                                select m.Id);
+                var managerids = from m in managers select m.Id;
 
                 var misc = await (from u in _context.Users
                                   join mm in _context.ManagedMembers
@@ -98,8 +88,7 @@ namespace issue_indexer_server.Controllers
                                   where managerids.Contains(mm.ManagerId)
                                   select u as UserDTO).ToListAsync();
                 inferiors = users.Concat(managers).Concat(misc).ToList();
-            } else
-            {
+            } else {
                 // If request is made from an unacknowledged account type, nothing is retured
                 return NoContent();
             }
@@ -107,11 +96,9 @@ namespace issue_indexer_server.Controllers
             return inferiors;
         }
 
-        private async Task<ActionResult<IEnumerable<UserDTO>>> GetSuperiors(uint userId, byte accountType)
-        {
+        private async Task<ActionResult<IEnumerable<UserDTO>>> GetSuperiors(uint userId, byte accountType) {
             List<UserDTO> superiors = null;
-            if (accountType == 0)
-            {
+            if (accountType == 0) {
                 // If the user is a normal user, it gets associated managers and admins
                 var managers = await (from u in _context.Users
                                       join mm in _context.ManagedMembers
@@ -135,30 +122,26 @@ namespace issue_indexer_server.Controllers
                                   select u as UserDTO).ToListAsync();
 
                 superiors = managers.Concat(admins).Concat(misc).Distinct().OrderBy(user => user.FirstName).ToList();
-            } else if (accountType == 1)
-            {
+            } else if (accountType == 1) {
                 // If the user is a manager, it gets admins
                 superiors = await (from u in _context.Users
-                                    join mm in _context.ManagedMembers
-                                    on u.Id equals mm.AdminId
-                                    where mm.ManagerId == userId || mm.UserId == userId
-                                    select u as UserDTO).ToListAsync();
-            } else
-            {
+                                   join mm in _context.ManagedMembers
+                                   on u.Id equals mm.AdminId
+                                   where mm.ManagerId == userId || mm.UserId == userId
+                                   select u as UserDTO).ToListAsync();
+            } else {
                 return NoContent();
             }
+
             if (superiors != null) superiors = superiors.Distinct().OrderBy(user => user.FirstName).ToList();
             return superiors;
         }
 
         // GET: api/Users/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<User>> GetUser(uint id)
-        {
-            var user = await _context.Users.FindAsync(id);
-
+        [HttpGet("{userId}")]
+        public async Task<ActionResult<User>> GetUser(uint userId) {
+            var user = await _context.Users.FindAsync(userId);
             if (user == null) return NotFound();
-
             return user;
         }
 
@@ -166,8 +149,7 @@ namespace issue_indexer_server.Controllers
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPut("{userId}")]
-        public async Task<IActionResult> PutUser(uint userId, UserDTO updatedUser, bool? promote, uint? adminId)
-        {
+        public async Task<IActionResult> PutUser(uint userId, UserDTO updatedUser, bool? promote, uint? adminId) {
             if (userId != updatedUser.Id) return BadRequest();
             var user = await _context.Users.FindAsync(userId);
 
@@ -180,32 +162,26 @@ namespace issue_indexer_server.Controllers
                 if (promote.Value) return await PromoteUser(user, admin);
                 else return await DemoteUser(user, admin);
 
-            } else
-            {
+            } else {
                 return await EditUserDetails(user, updatedUser);
             }
 
         }
 
-        private async Task<IActionResult> EditUserDetails(User user, UserDTO updatedUser)
-        {
+        private async Task<IActionResult> EditUserDetails(User user, UserDTO updatedUser) {
             user.FirstName = updatedUser.FirstName;
             user.LastName = updatedUser.LastName;
             user.Email = updatedUser.Email;
-            try
-            {
+            try {
                 await _context.SaveChangesAsync();
-            }
-            catch (Exception)
-            {
+            } catch (Exception) {
                 throw;
             }
             return NoContent();
         }
 
         // Promotes a user to manager status
-        private async Task<IActionResult> PromoteUser(User user, User admin)
-        {
+        private async Task<IActionResult> PromoteUser(User user, User admin) {
             // Checks to see if relation between admin and user exists
             var relationship = await (from mm in _context.ManagedMembers
                                       where mm.UserId == user.Id && mm.AdminId == admin.Id
@@ -213,7 +189,7 @@ namespace issue_indexer_server.Controllers
             // if it does not exist, create one
             if (relationship == null) {
                 // Creates record to link the new manager and the admin
-                ManagedMember newRelationship = new ManagedMember() {
+                var newRelationship = new ManagedMember() {
                     ManagerId = user.Id,
                     AdminId = admin.Id
                 };
@@ -222,39 +198,36 @@ namespace issue_indexer_server.Controllers
                 relationship.ManagerId = user.Id;
                 relationship.UserId = 0;
             }
-            
+
             // Promotes account type to manager
             user.AccountType = 1;
-            
+
             try {
                 await _context.SaveChangesAsync();
-            } catch (Exception)
-            {
-                return Conflict();
+            } catch (Exception) {
+                throw;
             }
             return NoContent();
         }
 
-        private async Task<IActionResult> DemoteUser(User manager, User admin)
-        {
+        private async Task<IActionResult> DemoteUser(User manager, User admin) {
             // changes manager-admin relationship to user-admin
             var relationship = await (from mm in _context.ManagedMembers
-                                         where mm.ManagerId == manager.Id && mm.AdminId == admin.Id
-                                         select mm).FirstOrDefaultAsync();
+                                      where mm.ManagerId == manager.Id && mm.AdminId == admin.Id
+                                      select mm).FirstOrDefaultAsync();
             relationship.ManagerId = 0;
             relationship.UserId = manager.Id;
 
-            
+
             // Gets members that were managed by the ex-manager and changes relationship
             // Members are still part of 
             var managedMembers = await (from mm in _context.ManagedMembers
-                                           where mm.ManagerId == manager.Id && mm.UserId != 0
-                                           select mm).ToListAsync();
-            managedMembers.ForEach(mm =>
-                {
-                    mm.ManagerId = 0;
-                    mm.AdminId = admin.Id;
-                });
+                                        where mm.ManagerId == manager.Id && mm.UserId != 0
+                                        select mm).ToListAsync();
+            managedMembers.ForEach(mm => {
+                mm.ManagerId = 0;
+                mm.AdminId = admin.Id;
+            });
 
             // Gets projects managed by ex-manager, and sets manager Id to admin
             // i.e. makes admin manager of their projects
@@ -262,16 +235,13 @@ namespace issue_indexer_server.Controllers
                                          where p.ManagerId == manager.Id
                                          select p).ToListAsync();
             managedProjects.ForEach(p => p.ManagerId = admin.Id);
-            
+
             // Demotes account type to standard user
             manager.AccountType = 0;
 
-            try
-            {
+            try {
                 await _context.SaveChangesAsync();
-            }
-            catch (Exception)
-            {
+            } catch (Exception) {
                 return Conflict();
             }
 
@@ -282,8 +252,7 @@ namespace issue_indexer_server.Controllers
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPost]
-        public async Task<ActionResult<User>> PostUser(User user)
-        {
+        public async Task<ActionResult<User>> PostUser(User user) {
             user.JoinedOn = DateTime.UtcNow;
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
@@ -293,8 +262,7 @@ namespace issue_indexer_server.Controllers
 
         // DELETE: api/Users/5
         [HttpDelete("{id}")]
-        public async Task<ActionResult<User>> DeleteUser(uint id)
-        {
+        public async Task<ActionResult<User>> DeleteUser(uint id) {
             var user = await _context.Users.FindAsync(id);
             if (user == null) return NotFound();
 
@@ -304,11 +272,9 @@ namespace issue_indexer_server.Controllers
             return user;
         }
 
-        private bool UserExists(uint id)
-        {
+        private bool UserExists(uint id) {
             return _context.Users.Any(e => e.Id == id);
         }
 
-        
     }
 }

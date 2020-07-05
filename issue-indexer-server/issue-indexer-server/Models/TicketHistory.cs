@@ -1,9 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace issue_indexer_server.Models
-{
-    public class TicketHistory : Ticket
-    {
+namespace issue_indexer_server.Models {
+
+    public class TicketHistory : Ticket {
         [Required(ErrorMessage = "Ticket ID field is required for Ticket History")]
         public uint TicketId { get; set; }
 
