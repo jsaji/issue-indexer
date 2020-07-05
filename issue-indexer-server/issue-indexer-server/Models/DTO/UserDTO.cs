@@ -18,5 +18,8 @@ namespace issue_indexer_server.Models.DTO
         [Required(ErrorMessage = "Email address field is required for User")]
         [EmailAddress(ErrorMessage = "Invalid email address")]
         public string Email { get; set; }
+
+        [Required(ErrorMessage = "Account Type field is required for User")]
+        public byte AccountType { get; set; }
     }
 }

@@ -8,8 +8,5 @@ namespace issue_indexer_server.Models
     {
         [Required(ErrorMessage = "Joined On field is required for User")]
         public DateTime JoinedOn { get; set; }
-
-        [Required(ErrorMessage = "Account Type field is required for User")]
-        public byte AccountType { get; set; }
     }
 }

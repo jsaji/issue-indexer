@@ -104,7 +104,7 @@ namespace issue_indexer_server.Controllers
             //if (!userId.HasValue) return BadRequest();
             if (projectId != project.Id) return BadRequest();
 
-            User user = await _context.Users.FindAsync(userId);
+            var user = await _context.Users.FindAsync(userId);
             Project original = await _context.Projects.FindAsync(project.Id);
 
             if (original == null) return NotFound();
@@ -121,7 +121,7 @@ namespace issue_indexer_server.Controllers
                 else await EditProjectFields(original, project);
                 return NoContent();
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return new StatusCodeResult(StatusCodes.Status500InternalServerError);
             }

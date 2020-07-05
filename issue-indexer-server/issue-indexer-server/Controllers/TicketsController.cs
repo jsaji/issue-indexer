@@ -74,7 +74,7 @@ namespace issue_indexer_server.Controllers
                 else await EditTicketFields(originalTicket, updatedTicket, userId.Value);
                 return NoContent();
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return new StatusCodeResult(StatusCodes.Status500InternalServerError);
             }

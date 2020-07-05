@@ -157,10 +157,7 @@ namespace issue_indexer_server.Controllers
         {
             var user = await _context.Users.FindAsync(id);
 
-            if (user == null)
-            {
-                return NotFound();
-            }
+            if (user == null) return NotFound();
 
             return user;
         }
@@ -169,26 +166,113 @@ namespace issue_indexer_server.Controllers
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPut("{userId}")]
-        public async Task<IActionResult> PutUser(uint userId, User user)
+        public async Task<IActionResult> PutUser(uint userId, UserDTO updatedUser, bool? promote, uint? adminId)
         {
-            if (userId != user.Id) return BadRequest();
+            if (userId != updatedUser.Id) return BadRequest();
+            var user = await _context.Users.FindAsync(userId);
 
-            _context.Entry(user).State = EntityState.Modified;
+            if (user == null) return NotFound();
+
+            if (promote.HasValue && adminId.HasValue) {
+                var admin = await _context.Users.FindAsync(adminId);
+                if (admin == null || admin.AccountType < 2) return Forbid();
+
+                if (promote.Value) return await PromoteUser(user, admin);
+                else return await DemoteUser(user, admin);
+
+            } else
+            {
+                return await EditUserDetails(user, updatedUser);
+            }
+
+        }
+
+        private async Task<IActionResult> EditUserDetails(User user, UserDTO updatedUser)
+        {
+            user.FirstName = updatedUser.FirstName;
+            user.LastName = updatedUser.LastName;
+            user.Email = updatedUser.Email;
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            return NoContent();
+        }
+
+        // Promotes a user to manager status
+        private async Task<IActionResult> PromoteUser(User user, User admin)
+        {
+            // Checks to see if relation between admin and user exists
+            var relationship = await (from mm in _context.ManagedMembers
+                                      where mm.UserId == user.Id && mm.AdminId == admin.Id
+                                      select mm).FirstOrDefaultAsync();
+            // if it does not exist, create one
+            if (relationship == null) {
+                // Creates record to link the new manager and the admin
+                ManagedMember newRelationship = new ManagedMember() {
+                    ManagerId = user.Id,
+                    AdminId = admin.Id
+                };
+                _context.ManagedMembers.Add(newRelationship);
+            } else {
+                relationship.ManagerId = user.Id;
+                relationship.UserId = 0;
+            }
+            
+            // Promotes account type to manager
+            user.AccountType = 1;
+            
+            try {
+                await _context.SaveChangesAsync();
+            } catch (Exception)
+            {
+                return Conflict();
+            }
+            return NoContent();
+        }
+
+        private async Task<IActionResult> DemoteUser(User manager, User admin)
+        {
+            // changes manager-admin relationship to user-admin
+            var relationship = await (from mm in _context.ManagedMembers
+                                         where mm.ManagerId == manager.Id && mm.AdminId == admin.Id
+                                         select mm).FirstOrDefaultAsync();
+            relationship.ManagerId = 0;
+            relationship.UserId = manager.Id;
+
+            
+            // Gets members that were managed by the ex-manager and changes relationship
+            // Members are still part of 
+            var managedMembers = await (from mm in _context.ManagedMembers
+                                           where mm.ManagerId == manager.Id && mm.UserId != 0
+                                           select mm).ToListAsync();
+            managedMembers.ForEach(mm =>
+                {
+                    mm.ManagerId = 0;
+                    mm.AdminId = admin.Id;
+                });
+
+            // Gets projects managed by ex-manager, and sets manager Id to admin
+            // i.e. makes admin manager of their projects
+            var managedProjects = await (from p in _context.Projects
+                                         where p.ManagerId == manager.Id
+                                         select p).ToListAsync();
+            managedProjects.ForEach(p => p.ManagerId = admin.Id);
+            
+            // Demotes account type to standard user
+            manager.AccountType = 0;
 
             try
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (Exception)
             {
-                if (!UserExists(userId))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return Conflict();
             }
 
             return NoContent();
@@ -212,10 +296,7 @@ namespace issue_indexer_server.Controllers
         public async Task<ActionResult<User>> DeleteUser(uint id)
         {
             var user = await _context.Users.FindAsync(id);
-            if (user == null)
-            {
-                return NotFound();
-            }
+            if (user == null) return NotFound();
 
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
