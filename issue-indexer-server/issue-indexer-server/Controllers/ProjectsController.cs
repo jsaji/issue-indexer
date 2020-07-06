@@ -135,17 +135,18 @@ namespace issue_indexer_server.Controllers {
                 var unmanagedUsers = await (from ur in _context.UserRelationships
                                             join u in _context.Users
                                             on ur.UserAId equals u.Id
-                                            where projectMembers.Contains(ur.UserAId)
+                                            where projectMembers.Contains(ur.UserAId) && ur.UserBId != manager.Id && ur.UserBSuperior
                                             && u.AccountType < manager.AccountType
                                             select ur.UserAId).ToListAsync();
 
                 // If there are any, add records indicating that they are managed by the new manager
                 if (unmanagedUsers != null && unmanagedUsers.Count > 0) {
-                    List<UserRelationship> newMembers = new List<UserRelationship>();
+                    var newMembers = new List<UserRelationship>();
                     unmanagedUsers.ForEach(user => newMembers.Add(
                         new UserRelationship() {
-                            UserId = user,
-                            ManagerId = manager.Id
+                            UserAId = user,
+                            UserBId = manager.Id,
+                            UserBSuperior = true
                         }
                     ));
 

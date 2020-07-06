@@ -92,7 +92,7 @@ namespace issue_indexer_server.Data {
                         ProjectId = 4
                     }
                 );
-                context.ManagedMembers.AddRange(
+                context.UserRelationships.AddRange(
                     new UserRelationship {
                         UserAId = 3,
                         UserBId = 2,

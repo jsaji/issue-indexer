@@ -20,17 +20,21 @@ namespace issue_indexer_server.Controllers {
             _context = context;
         }
 
-        // GET: api/Users?userId=1&superiors=true -> returns a user's superiors
-        // or api/Users?userId=1 -> returns a user's inferiors
+        // GET: api/Users?userId=1&superiors=1 -> returns a user's superiors
+        // or api/Users?userId=1-> returns a user's same level users
+        // or api/Users?userId=1&superiors=0 -> returns a user's inferiors
         // or api/Users?projectId=1 -> returns users that are members of a project
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserDTO>>> GetUsers(uint? userId, bool? superiors, uint? projectId) {
+        public async Task<ActionResult<IEnumerable<UserDTO>>> GetUsers(uint? userId, byte? superiors, uint? projectId) {
             if (userId.HasValue) {
                 var user = await _context.Users.FindAsync(userId);
                 if (user == null) return NotFound();
 
-                if (superiors.HasValue && (bool)superiors) return await GetSuperiors(user.Id);
-                else return await GetInferiors(user.Id, user.AccountType);
+                if (superiors.HasValue) {
+                    if (superiors.Value == 1) return await GetSuperiors(user.Id);
+                    else if (superiors.Value == 0) return await GetInferiors(user.Id);
+                    else return await GetSameLevel(user.Id);
+                }
             } else if (projectId.HasValue) {
                 bool projectExists = await _context.Projects.AnyAsync(p => p.Id == projectId);
                 if (!projectExists) return NotFound();
@@ -55,7 +59,16 @@ namespace issue_indexer_server.Controllers {
             else return NotFound();
         }
 
-        private async Task<ActionResult<IEnumerable<UserDTO>>> GetInferiors(uint userId, byte accountType) {
+        private async Task<ActionResult<IEnumerable<UserDTO>>> GetSameLevel(uint userId) {
+            var sameLevelUsers = await (from u in _context.Users
+                                        join ur in _context.UserRelationships
+                                        on u.Id equals ur.UserAId
+                                        where ur.UserBId == userId || ur.UserAId == userId && !ur.UserBSuperior
+                                        select u as UserDTO).Distinct().ToListAsync();
+            return sameLevelUsers;
+        }
+
+        private async Task<ActionResult<IEnumerable<UserDTO>>> GetInferiors(uint userId) {
             var inferiors = await (from u in _context.Users
                                    join ur in _context.UserRelationships
                                    on u.Id equals ur.UserAId
@@ -65,7 +78,7 @@ namespace issue_indexer_server.Controllers {
         }
 
         private async Task<ActionResult<IEnumerable<UserDTO>>> GetSuperiors(uint userId) {
-             var superiors = await (from u in _context.Users
+            var superiors = await (from u in _context.Users
                                    join ur in _context.UserRelationships
                                    on u.Id equals ur.UserBId
                                    where ur.UserAId == userId && ur.UserBSuperior
@@ -148,8 +161,8 @@ namespace issue_indexer_server.Controllers {
 
             // Gets relationships & users where manager is superior
             var userRelationships = await (from ur in _context.UserRelationships
-                                        where ur.UserBId == manager.Id && ur.UserBSuperior
-                                        select ur).ToListAsync();
+                                           where ur.UserBId == manager.Id && ur.UserBSuperior
+                                           select ur).ToListAsync();
             var userRelationshipIds = from ur in userRelationships
                                       select ur.UserAId;
             var users = await (from u in _context.Users
@@ -204,9 +217,9 @@ namespace issue_indexer_server.Controllers {
         }
 
         // DELETE: api/Users/5
-        [HttpDelete("{id}")]
-        public async Task<ActionResult<User>> DeleteUser(uint id) {
-            var user = await _context.Users.FindAsync(id);
+        [HttpDelete("{userId}")]
+        public async Task<ActionResult<User>> DeleteUser(uint userId) {
+            var user = await _context.Users.FindAsync(userId);
             if (user == null) return NotFound();
 
             _context.Users.Remove(user);
@@ -214,10 +227,5 @@ namespace issue_indexer_server.Controllers {
 
             return user;
         }
-
-        private bool UserExists(uint id) {
-            return _context.Users.Any(e => e.Id == id);
-        }
-
     }
 }
