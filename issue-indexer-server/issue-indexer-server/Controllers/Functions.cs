@@ -42,5 +42,9 @@ namespace issue_indexer_server.Controllers {
                                   select c).AsNoTracking().ToListAsync();
             return comments;
         }
+
+        public static async Task<bool> UserExists(IssueIndexerContext _context, uint userId) {
+            return await _context.Users.AnyAsync(e => e.Id == userId);
+        }
     }
 }

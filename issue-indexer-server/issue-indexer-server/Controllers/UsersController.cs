@@ -60,21 +60,21 @@ namespace issue_indexer_server.Controllers {
             if (accountType == 1) {
                 // Gets users that the manager has added
                 inferiors = await (from u in _context.Users
-                                   join mm in _context.ManagedMembers
+                                   join mm in _context.UserRelationships
                                    on u.Id equals mm.UserId
                                    where mm.ManagerId == userId
                                    select u as UserDTO).ToListAsync();
             } else if (accountType == 2) {
                 // Gets users that the Admin has 'added'
                 var users = await (from u in _context.Users
-                                   join mm in _context.ManagedMembers
+                                   join mm in _context.UserRelationships
                                    on u.Id equals mm.UserId
                                    where mm.ManagerId == userId || mm.AdminId == userId
                                    select u as UserDTO).ToListAsync();
 
                 // Gets managers the Admin has 'added'
                 var managers = await (from u in _context.Users
-                                      join mm in _context.ManagedMembers
+                                      join mm in _context.UserRelationships
                                       on u.Id equals mm.ManagerId
                                       where mm.AdminId == userId
                                       select u as UserDTO).ToListAsync();
@@ -83,7 +83,7 @@ namespace issue_indexer_server.Controllers {
                 var managerids = from m in managers select m.Id;
 
                 var misc = await (from u in _context.Users
-                                  join mm in _context.ManagedMembers
+                                  join mm in _context.UserRelationships
                                   on u.Id equals mm.UserId
                                   where managerids.Contains(mm.ManagerId)
                                   select u as UserDTO).ToListAsync();
@@ -101,13 +101,13 @@ namespace issue_indexer_server.Controllers {
             if (accountType == 0) {
                 // If the user is a normal user, it gets associated managers and admins
                 var managers = await (from u in _context.Users
-                                      join mm in _context.ManagedMembers
+                                      join mm in _context.UserRelationships
                                       on u.Id equals mm.ManagerId
                                       where mm.UserId == userId
                                       select u as UserDTO).Distinct().ToListAsync();
 
                 var admins = await (from u in _context.Users
-                                    join mm in _context.ManagedMembers
+                                    join mm in _context.UserRelationships
                                     on u.Id equals mm.AdminId
                                     where mm.UserId == userId
                                     select u as UserDTO).Distinct().ToListAsync();
@@ -116,7 +116,7 @@ namespace issue_indexer_server.Controllers {
                                                              select m.Id);
 
                 var misc = await (from u in _context.Users
-                                  join mm in _context.ManagedMembers
+                                  join mm in _context.UserRelationships
                                   on u.Id equals mm.AdminId
                                   where managerids.Contains(mm.ManagerId)
                                   select u as UserDTO).ToListAsync();
@@ -125,7 +125,7 @@ namespace issue_indexer_server.Controllers {
             } else if (accountType == 1) {
                 // If the user is a manager, it gets admins
                 superiors = await (from u in _context.Users
-                                   join mm in _context.ManagedMembers
+                                   join mm in _context.UserRelationships
                                    on u.Id equals mm.AdminId
                                    where mm.ManagerId == userId || mm.UserId == userId
                                    select u as UserDTO).ToListAsync();
@@ -183,17 +183,17 @@ namespace issue_indexer_server.Controllers {
         // Promotes a user to manager status
         private async Task<IActionResult> PromoteUser(User user, User admin) {
             // Checks to see if relation between admin and user exists
-            var relationship = await (from mm in _context.ManagedMembers
+            var relationship = await (from mm in _context.UserRelationships
                                       where mm.UserId == user.Id && mm.AdminId == admin.Id
                                       select mm).FirstOrDefaultAsync();
             // if it does not exist, create one
             if (relationship == null) {
                 // Creates record to link the new manager and the admin
-                var newRelationship = new ManagedMember() {
+                var newRelationship = new UserRelationship() {
                     ManagerId = user.Id,
                     AdminId = admin.Id
                 };
-                _context.ManagedMembers.Add(newRelationship);
+                _context.UserRelationships.Add(newRelationship);
             } else {
                 relationship.ManagerId = user.Id;
                 relationship.UserId = 0;
@@ -212,7 +212,7 @@ namespace issue_indexer_server.Controllers {
 
         private async Task<IActionResult> DemoteUser(User manager, User admin) {
             // changes manager-admin relationship to user-admin
-            var relationship = await (from mm in _context.ManagedMembers
+            var relationship = await (from mm in _context.UserRelationships
                                       where mm.ManagerId == manager.Id && mm.AdminId == admin.Id
                                       select mm).FirstOrDefaultAsync();
             relationship.ManagerId = 0;
@@ -221,10 +221,10 @@ namespace issue_indexer_server.Controllers {
 
             // Gets members that were managed by the ex-manager and changes relationship
             // Members are still part of 
-            var managedMembers = await (from mm in _context.ManagedMembers
+            var UserRelationships = await (from mm in _context.UserRelationships
                                         where mm.ManagerId == manager.Id && mm.UserId != 0
                                         select mm).ToListAsync();
-            managedMembers.ForEach(mm => {
+            UserRelationships.ForEach(mm => {
                 mm.ManagerId = 0;
                 mm.AdminId = admin.Id;
             });

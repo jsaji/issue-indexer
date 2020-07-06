@@ -140,9 +140,9 @@ namespace issue_indexer_server.Controllers {
 
                 // If there are any, add records indicating that they are managed by the new manager
                 if (unmanagedUsers != null && unmanagedUsers.Count > 0) {
-                    List<ManagedMember> newMembers = new List<ManagedMember>();
+                    List<UserRelationship> newMembers = new List<UserRelationship>();
                     unmanagedUsers.ForEach(user => newMembers.Add(
-                        new ManagedMember() {
+                        new UserRelationship() {
                             UserId = user,
                             ManagerId = manager.Id
                         }

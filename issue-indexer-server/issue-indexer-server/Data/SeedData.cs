@@ -93,13 +93,15 @@ namespace issue_indexer_server.Data {
                     }
                 );
                 context.ManagedMembers.AddRange(
-                    new ManagedMember {
-                        UserId = 3,
-                        ManagerId = 2
+                    new UserRelationship {
+                        UserAId = 3,
+                        UserBId = 2,
+                        UserBSuperior = true
                     },
-                    new ManagedMember {
-                        ManagerId = 2,
-                        AdminId = 1
+                    new UserRelationship {
+                        UserAId = 2,
+                        UserBId = 1,
+                        UserBSuperior = true
                     }
                 );
                 context.Tickets.AddRange(
