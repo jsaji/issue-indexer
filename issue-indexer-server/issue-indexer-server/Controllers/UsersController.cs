@@ -29,7 +29,7 @@ namespace issue_indexer_server.Controllers {
                 var user = await _context.Users.FindAsync(userId);
                 if (user == null) return NotFound();
 
-                if (superiors.HasValue && (bool)superiors) return await GetSuperiors(user.Id, user.AccountType);
+                if (superiors.HasValue && (bool)superiors) return await GetSuperiors(user.Id);
                 else return await GetInferiors(user.Id, user.AccountType);
             } else if (projectId.HasValue) {
                 bool projectExists = await _context.Projects.AnyAsync(p => p.Id == projectId);
@@ -56,84 +56,20 @@ namespace issue_indexer_server.Controllers {
         }
 
         private async Task<ActionResult<IEnumerable<UserDTO>>> GetInferiors(uint userId, byte accountType) {
-            List<UserDTO> inferiors = null;
-            if (accountType == 1) {
-                // Gets users that the manager has added
-                inferiors = await (from u in _context.Users
-                                   join mm in _context.UserRelationships
-                                   on u.Id equals mm.UserId
-                                   where mm.ManagerId == userId
-                                   select u as UserDTO).ToListAsync();
-            } else if (accountType == 2) {
-                // Gets users that the Admin has 'added'
-                var users = await (from u in _context.Users
-                                   join mm in _context.UserRelationships
-                                   on u.Id equals mm.UserId
-                                   where mm.ManagerId == userId || mm.AdminId == userId
-                                   select u as UserDTO).ToListAsync();
-
-                // Gets managers the Admin has 'added'
-                var managers = await (from u in _context.Users
-                                      join mm in _context.UserRelationships
-                                      on u.Id equals mm.ManagerId
-                                      where mm.AdminId == userId
-                                      select u as UserDTO).ToListAsync();
-
-                // Gets users that the Admin's managers have 'added'
-                var managerids = from m in managers select m.Id;
-
-                var misc = await (from u in _context.Users
-                                  join mm in _context.UserRelationships
-                                  on u.Id equals mm.UserId
-                                  where managerids.Contains(mm.ManagerId)
-                                  select u as UserDTO).ToListAsync();
-                inferiors = users.Concat(managers).Concat(misc).ToList();
-            } else {
-                // If request is made from an unacknowledged account type, nothing is retured
-                return NoContent();
-            }
-            if (inferiors != null) inferiors = inferiors.Distinct().OrderBy(user => user.FirstName).ToList();
+            var inferiors = await (from u in _context.Users
+                                   join ur in _context.UserRelationships
+                                   on u.Id equals ur.UserAId
+                                   where ur.UserBId == userId && ur.UserBSuperior
+                                   select u as UserDTO).Distinct().ToListAsync();
             return inferiors;
         }
 
-        private async Task<ActionResult<IEnumerable<UserDTO>>> GetSuperiors(uint userId, byte accountType) {
-            List<UserDTO> superiors = null;
-            if (accountType == 0) {
-                // If the user is a normal user, it gets associated managers and admins
-                var managers = await (from u in _context.Users
-                                      join mm in _context.UserRelationships
-                                      on u.Id equals mm.ManagerId
-                                      where mm.UserId == userId
-                                      select u as UserDTO).Distinct().ToListAsync();
-
-                var admins = await (from u in _context.Users
-                                    join mm in _context.UserRelationships
-                                    on u.Id equals mm.AdminId
-                                    where mm.UserId == userId
-                                    select u as UserDTO).Distinct().ToListAsync();
-
-                HashSet<uint> managerids = new HashSet<uint>(from m in managers
-                                                             select m.Id);
-
-                var misc = await (from u in _context.Users
-                                  join mm in _context.UserRelationships
-                                  on u.Id equals mm.AdminId
-                                  where managerids.Contains(mm.ManagerId)
-                                  select u as UserDTO).ToListAsync();
-
-                superiors = managers.Concat(admins).Concat(misc).Distinct().OrderBy(user => user.FirstName).ToList();
-            } else if (accountType == 1) {
-                // If the user is a manager, it gets admins
-                superiors = await (from u in _context.Users
-                                   join mm in _context.UserRelationships
-                                   on u.Id equals mm.AdminId
-                                   where mm.ManagerId == userId || mm.UserId == userId
-                                   select u as UserDTO).ToListAsync();
-            } else {
-                return NoContent();
-            }
-
-            if (superiors != null) superiors = superiors.Distinct().OrderBy(user => user.FirstName).ToList();
+        private async Task<ActionResult<IEnumerable<UserDTO>>> GetSuperiors(uint userId) {
+             var superiors = await (from u in _context.Users
+                                   join ur in _context.UserRelationships
+                                   on u.Id equals ur.UserBId
+                                   where ur.UserAId == userId && ur.UserBSuperior
+                                   select u as UserDTO).Distinct().ToListAsync();
             return superiors;
         }
 
@@ -183,20 +119,18 @@ namespace issue_indexer_server.Controllers {
         // Promotes a user to manager status
         private async Task<IActionResult> PromoteUser(User user, User admin) {
             // Checks to see if relation between admin and user exists
-            var relationship = await (from mm in _context.UserRelationships
-                                      where mm.UserId == user.Id && mm.AdminId == admin.Id
-                                      select mm).FirstOrDefaultAsync();
+            var relationship = await (from ur in _context.UserRelationships
+                                      where ur.UserAId == user.Id && ur.UserBId == admin.Id && ur.UserBSuperior
+                                      select ur).FirstOrDefaultAsync();
             // if it does not exist, create one
             if (relationship == null) {
                 // Creates record to link the new manager and the admin
                 var newRelationship = new UserRelationship() {
-                    ManagerId = user.Id,
-                    AdminId = admin.Id
+                    UserAId = user.Id,
+                    UserBId = admin.Id,
+                    UserBSuperior = true
                 };
                 _context.UserRelationships.Add(newRelationship);
-            } else {
-                relationship.ManagerId = user.Id;
-                relationship.UserId = 0;
             }
 
             // Promotes account type to manager
@@ -211,22 +145,31 @@ namespace issue_indexer_server.Controllers {
         }
 
         private async Task<IActionResult> DemoteUser(User manager, User admin) {
-            // changes manager-admin relationship to user-admin
-            var relationship = await (from mm in _context.UserRelationships
-                                      where mm.ManagerId == manager.Id && mm.AdminId == admin.Id
-                                      select mm).FirstOrDefaultAsync();
-            relationship.ManagerId = 0;
-            relationship.UserId = manager.Id;
 
+            // Gets relationships & users where manager is superior
+            var userRelationships = await (from ur in _context.UserRelationships
+                                        where ur.UserBId == manager.Id && ur.UserBSuperior
+                                        select ur).ToListAsync();
+            var userRelationshipIds = from ur in userRelationships
+                                      select ur.UserAId;
+            var users = await (from u in _context.Users
+                               where userRelationshipIds.Contains(u.Id)
+                               select u).ToDictionaryAsync(u => u.Id, u => u.AccountType);
 
-            // Gets members that were managed by the ex-manager and changes relationship
-            // Members are still part of 
-            var UserRelationships = await (from mm in _context.UserRelationships
-                                        where mm.ManagerId == manager.Id && mm.UserId != 0
-                                        select mm).ToListAsync();
-            UserRelationships.ForEach(mm => {
-                mm.ManagerId = 0;
-                mm.AdminId = admin.Id;
+            // For each relationship, change them according to what would happen when manager is demoted
+            userRelationships.ForEach(ur => {
+                if (users.ContainsKey(ur.UserAId)) {
+                    if (users[ur.UserAId] == manager.AccountType) {
+                        // If they're at the same level currently, it means the ex-manager will be inferior
+                        var temp = ur.UserAId;
+                        ur.UserAId = ur.UserBId;
+                        ur.UserBId = temp;
+                        ur.UserBSuperior = true;
+                    } else if (users[ur.UserAId] == manager.AccountType - 1) {
+                        // If they're lower by 1 level, they are no longer the superior user
+                        ur.UserBSuperior = false;
+                    }
+                }
             });
 
             // Gets projects managed by ex-manager, and sets manager Id to admin

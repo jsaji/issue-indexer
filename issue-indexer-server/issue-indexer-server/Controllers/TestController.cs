@@ -8,8 +8,8 @@ namespace issue_indexer_server.Controllers {
     public class ApiController : ControllerBase {
 
         [HttpGet]
-        public async Task<ActionResult<string>> Get() {
-            return "Up and running!";
+        public async Task<IActionResult> Get() {
+            return Content("Up and running!");
         }
     }
 }

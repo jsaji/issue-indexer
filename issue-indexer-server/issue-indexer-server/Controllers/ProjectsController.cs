@@ -46,16 +46,18 @@ namespace issue_indexer_server.Controllers {
             // If the accountType is 1 (i.e. manager), it gets all the projects managed by this user
             // else, if it's 2 (i.e. admin), it gets all projects managed by managers that the admin oversees
             List<ProjectDTO> projects = null;
-            if (accountType == 1) {
+            if (accountType > 0) {
                 projects = await (from p in _context.Projects
                                   where p.ManagerId == userId && p.IsDeleted == getDeleted
                                   select p as ProjectDTO).ToListAsync();
-            } else if (accountType == 2) {
-                projects = await (from p in _context.Projects
-                                  join mm in _context.ManagedMembers
-                                  on p.ManagerId equals mm.ManagerId
-                                  where (mm.AdminId == userId || p.ManagerId == userId) && p.IsDeleted == getDeleted
-                                  select p as ProjectDTO).ToListAsync();
+                if (accountType > 1) {
+                    var extra = await (from p in _context.Projects
+                                       join ur in _context.UserRelationships
+                                       on p.ManagerId equals ur.UserAId
+                                       where ur.UserBId == userId && ur.UserBSuperior && p.IsDeleted == getDeleted
+                                       select p as ProjectDTO).ToListAsync();
+                    projects.AddRange(extra);
+                }
             }
             return projects;
             //else return NotFound();
@@ -115,10 +117,9 @@ namespace issue_indexer_server.Controllers {
                 if (manager == null || manager.AccountType < 1) return BadRequest();
 
                 // Gets all current project members
-                HashSet<uint> projectMembers = new HashSet<uint>
-                    (await (from pm in _context.ProjectMembers
-                            where pm.ProjectId == project.Id
-                            select pm.UserId).ToListAsync());
+                var projectMembers = await (from pm in _context.ProjectMembers
+                                            where pm.ProjectId == project.Id
+                                            select pm.UserId).ToListAsync();
 
                 // If the individual made manager of the project is a member, add them
                 if (!projectMembers.Contains(manager.Id)) {
@@ -131,12 +132,12 @@ namespace issue_indexer_server.Controllers {
 
                 // Get all the project members that are not currently 'managed' by the new manager
                 // Ignores any members that are admins or managers
-                var unmanagedUsers = await (from mm in _context.ManagedMembers
+                var unmanagedUsers = await (from ur in _context.UserRelationships
                                             join u in _context.Users
-                                            on mm.UserId equals u.Id
-                                            where projectMembers.Contains(mm.UserId) && (mm.ManagerId != manager.Id)
-                                            && u.AccountType == 0
-                                            select mm.UserId).ToListAsync();
+                                            on ur.UserAId equals u.Id
+                                            where projectMembers.Contains(ur.UserAId)
+                                            && u.AccountType < manager.AccountType
+                                            select ur.UserAId).ToListAsync();
 
                 // If there are any, add records indicating that they are managed by the new manager
                 if (unmanagedUsers != null && unmanagedUsers.Count > 0) {
@@ -148,7 +149,7 @@ namespace issue_indexer_server.Controllers {
                         }
                     ));
 
-                    _context.ManagedMembers.AddRange(newMembers);
+                    _context.UserRelationships.AddRange(newMembers);
                 }
 
             }
