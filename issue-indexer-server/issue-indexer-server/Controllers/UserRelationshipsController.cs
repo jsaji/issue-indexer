@@ -68,13 +68,22 @@ namespace issue_indexer_server.Controllers {
 
             // Checks that user and superior exists
             // could be simplified if API knows who's making the call
-            var userExists = await Functions.UserExists(_context, userRelationship.UserAId); ;
-            var superiorExists = await Functions.UserExists(_context, userRelationship.UserBId);
+            var user1 = await _context.Users.FindAsync(userRelationship.UserAId);
+            var user2 = await _context.Users.FindAsync(userRelationship.UserBId);
 
-            if (!userExists || !superiorExists) return BadRequest();
+            if (user1 == null || user2 == null) return BadRequest();
 
             if (result == null) {
-                
+                if (user1.AccountType != user2.AccountType) {
+                    if (user1.AccountType > user2.AccountType) {
+                        var temp = userRelationship.UserAId;
+                        userRelationship.UserAId = userRelationship.UserBId;
+                        userRelationship.UserBId = temp;
+                    }
+                    userRelationship.UserBSuperior = true;
+                } else {
+                    userRelationship.UserBSuperior = false;
+                }
                 _context.UserRelationships.Add(userRelationship);
                 await _context.SaveChangesAsync();
 
