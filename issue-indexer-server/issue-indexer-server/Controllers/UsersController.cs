@@ -21,20 +21,16 @@ namespace issue_indexer_server.Controllers {
         }
 
         // GET: api/Users?userId=1&superiors=1 -> returns a user's superiors
-        // or api/Users?userId=1-> returns a user's same level users
-        // or api/Users?userId=1&superiors=0 -> returns a user's inferiors
+        // or api/Users?userId=1 -> returns a user's inferiors & those on same level
         // or api/Users?projectId=1 -> returns users that are members of a project
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserDTO>>> GetUsers(uint? userId, byte? superiors, uint? projectId) {
+        public async Task<ActionResult<IEnumerable<UserDTO>>> GetUsers(uint? userId, bool? superiors, uint? projectId) {
             if (userId.HasValue) {
                 var user = await _context.Users.FindAsync(userId);
                 if (user == null) return NotFound();
 
-                if (superiors.HasValue) {
-                    if (superiors.Value == 1) return await GetSuperiors(user.Id);
-                    else if (superiors.Value == 0) return await GetInferiors(user.Id);
-                    else return await GetSameLevel(user.Id);
-                }
+                if (superiors.HasValue && superiors.Value) return await GetSuperiors(user);
+                else return await GetInferiors(user);
             } else if (projectId.HasValue) {
                 bool projectExists = await _context.Projects.AnyAsync(p => p.Id == projectId);
                 if (!projectExists) return NotFound();
@@ -59,29 +55,45 @@ namespace issue_indexer_server.Controllers {
             else return NotFound();
         }
 
-        private async Task<ActionResult<IEnumerable<UserDTO>>> GetSameLevel(uint userId) {
+        private async Task<ActionResult<IEnumerable<UserDTO>>> GetInferiors(User user) {
+            // Gets users on the "same level" i.e. users that are not superior
             var sameLevelUsers = await (from u in _context.Users
                                         join ur in _context.UserRelationships
                                         on u.Id equals ur.UserAId
-                                        where ur.UserBId == userId || ur.UserAId == userId && !ur.UserBSuperior
+                                        where ur.UserBId == user.Id || ur.UserAId == user.Id && !ur.UserBSuperior
                                         select u as UserDTO).Distinct().ToListAsync();
-            return sameLevelUsers;
+
+            if (user.AccountType > 0) {
+                // Gets users directly below the user
+                var inferiors = await (from u in _context.Users
+                                       join ur in _context.UserRelationships
+                                       on u.Id equals ur.UserAId
+                                       where ur.UserBId == user.Id && ur.UserBSuperior
+                                       select u as UserDTO).Distinct().ToListAsync();
+                if (user.AccountType > 1) {
+                    // Gets all manager users from the list and gets users under the managers
+                    var managerIds = from u in inferiors
+                                      where u.AccountType == 1
+                                      select u.Id;
+                    var indirectInferiors = await (from u in _context.Users
+                                                   join ur in _context.UserRelationships
+                                                   on u.Id equals ur.UserAId
+                                                   where managerIds.Contains(ur.UserBId) && ur.UserBSuperior
+                                                   select u as UserDTO).Distinct().ToListAsync();
+                    inferiors.AddRange(indirectInferiors);
+                }
+                sameLevelUsers.AddRange(inferiors);
+            } 
+            
+            
+            return sameLevelUsers.Distinct().ToList();
         }
 
-        private async Task<ActionResult<IEnumerable<UserDTO>>> GetInferiors(uint userId) {
-            var inferiors = await (from u in _context.Users
-                                   join ur in _context.UserRelationships
-                                   on u.Id equals ur.UserAId
-                                   where ur.UserBId == userId && ur.UserBSuperior
-                                   select u as UserDTO).Distinct().ToListAsync();
-            return inferiors;
-        }
-
-        private async Task<ActionResult<IEnumerable<UserDTO>>> GetSuperiors(uint userId) {
+        private async Task<ActionResult<IEnumerable<UserDTO>>> GetSuperiors(User user) {
             var superiors = await (from u in _context.Users
                                    join ur in _context.UserRelationships
                                    on u.Id equals ur.UserBId
-                                   where ur.UserAId == userId && ur.UserBSuperior
+                                   where ur.UserAId == user.Id && ur.UserBSuperior
                                    select u as UserDTO).Distinct().ToListAsync();
             return superiors;
         }
