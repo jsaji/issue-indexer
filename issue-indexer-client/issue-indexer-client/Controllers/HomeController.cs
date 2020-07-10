@@ -28,6 +28,31 @@ namespace issue_indexer_client.Controllers
             return View();
         }
 
+        [HttpGet]
+        public IActionResult Login() {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult Login(LoginModel loginModel) {
+            if (ModelState.IsValid) {
+                return RedirectToAction("Index", "Main", new { area = "Dashboard" });
+            }
+            return View(loginModel);
+        }
+
+        [HttpGet]
+        public IActionResult Register() {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult Register(RegisterModel registerModel) {
+            return RedirectToAction("Index", "Main", new { area = "Dashboard" });
+        }
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {

@@ -222,10 +222,11 @@ namespace issue_indexer_server.Controllers {
         [HttpPost]
         public async Task<ActionResult<User>> PostUser(User user) {
             user.JoinedOn = DateTime.UtcNow;
+            user.AccountType = 0;
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetUser", new { id = user.Id }, user);
+            return StatusCode(204);
         }
 
         // DELETE: api/Users/5
