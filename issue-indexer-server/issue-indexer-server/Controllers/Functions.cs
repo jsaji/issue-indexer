@@ -29,6 +29,16 @@ namespace issue_indexer_server.Controllers {
             };
         }
 
+        public static UserDTO UserToDTO(User user) {
+            return new UserDTO() {
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                AccountType = user.AccountType,
+                Email = user.Email,
+                Id = user.Id
+            };
+        }
+
         public static async Task<List<TicketHistory>> GetTicketHistory(IssueIndexerContext _context, List<uint> ticketIds) {
             var ticketHistory = await (from th in _context.TicketHistory
                                        where ticketIds.Contains(th.TicketId)

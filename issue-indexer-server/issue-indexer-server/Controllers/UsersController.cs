@@ -39,20 +39,19 @@ namespace issue_indexer_server.Controllers {
             }
 
             // return NotFound();
-            return await _context.Users.Select(x => (UserDTO)x).ToListAsync();
+            return await _context.Users.Select(x => Functions.UserToDTO(x)).ToListAsync();
         }
 
         private async Task<ActionResult<IEnumerable<UserDTO>>> GetProjectMembers(uint projectId) {
-            List<UserDTO> users = null;
-
-            users = await (from u in _context.Users
+            var users = await (from u in _context.Users
                            join pm in _context.ProjectMembers
                            on u.Id equals pm.UserId
                            where pm.ProjectId == projectId
-                           select u as UserDTO).ToListAsync();
+                           select u).ToListAsync();
+            
+            if (users == null) return NotFound();
 
-            if (users != null) return users;
-            else return NotFound();
+            return users.Select(x => Functions.UserToDTO(x)).ToList();
         }
 
         private async Task<ActionResult<IEnumerable<UserDTO>>> GetInferiors(User user) {
@@ -61,7 +60,7 @@ namespace issue_indexer_server.Controllers {
                                         join ur in _context.UserRelationships
                                         on u.Id equals ur.UserAId
                                         where ur.UserBId == user.Id || ur.UserAId == user.Id && !ur.UserBSuperior
-                                        select u as UserDTO).Distinct().ToListAsync();
+                                        select u).Distinct().ToListAsync();
 
             if (user.AccountType > 0) {
                 // Gets users directly below the user
@@ -69,7 +68,7 @@ namespace issue_indexer_server.Controllers {
                                        join ur in _context.UserRelationships
                                        on u.Id equals ur.UserAId
                                        where ur.UserBId == user.Id && ur.UserBSuperior
-                                       select u as UserDTO).Distinct().ToListAsync();
+                                       select u).Distinct().ToListAsync();
                 if (user.AccountType > 1) {
                     // Gets all manager users from the list and gets users under the managers
                     var managerIds = from u in inferiors
@@ -79,14 +78,13 @@ namespace issue_indexer_server.Controllers {
                                                    join ur in _context.UserRelationships
                                                    on u.Id equals ur.UserAId
                                                    where managerIds.Contains(ur.UserBId) && ur.UserBSuperior
-                                                   select u as UserDTO).Distinct().ToListAsync();
+                                                   select u).Distinct().ToListAsync();
                     inferiors.AddRange(indirectInferiors);
                 }
                 sameLevelUsers.AddRange(inferiors);
-            } 
-            
-            
-            return sameLevelUsers.Distinct().ToList();
+            }
+
+            return sameLevelUsers.Select(x => Functions.UserToDTO(x)).Distinct().ToList();
         }
 
         private async Task<ActionResult<IEnumerable<UserDTO>>> GetSuperiors(User user) {
@@ -94,8 +92,8 @@ namespace issue_indexer_server.Controllers {
                                    join ur in _context.UserRelationships
                                    on u.Id equals ur.UserBId
                                    where ur.UserAId == user.Id && ur.UserBSuperior
-                                   select u as UserDTO).Distinct().ToListAsync();
-            return superiors;
+                                   select u).Distinct().ToListAsync();
+            return superiors.Select(x => Functions.UserToDTO(x)).ToList();
         }
 
         // GET: api/Users/5
@@ -220,13 +218,24 @@ namespace issue_indexer_server.Controllers {
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPost]
+        [ActionName("User")]
         public async Task<ActionResult<User>> PostUser(User user) {
-            user.JoinedOn = DateTime.UtcNow;
-            user.AccountType = 0;
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            var userInDB = _context.Users.SingleOrDefault(x => x.Email.Equals(user.Email));
+            if (userInDB != null) {
+                if (userInDB.Email.Equals(user.Email)) return Ok();
+            } else {
+                user.JoinedOn = DateTime.UtcNow;
+                user.AccountType = 0;
+                _context.Users.Add(user);
+                try {
+                    await _context.SaveChangesAsync();
+                    return StatusCode(204);
+                } catch (Exception) {
+                    return Conflict();
+                }
+            }
 
-            return StatusCode(204);
+            return Conflict();
         }
 
         // DELETE: api/Users/5

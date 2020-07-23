@@ -1,18 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using issue_indexer_server.Models;
 using issue_indexer_server.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using issue_indexer_server.Models;
 
 namespace issue_indexer_server {
 
@@ -29,6 +23,10 @@ namespace issue_indexer_server {
             services.AddDbContext<IssueIndexerContext>(
                 options => options.UseInMemoryDatabase("IssueIndexer")
             );
+            services.AddIdentity<User, IdentityRole<uint>>()
+                .AddEntityFrameworkStores<IssueIndexerContext>()
+                .AddDefaultTokenProviders();
+
             services.AddControllers();
         }
 
