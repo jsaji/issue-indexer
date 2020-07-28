@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using issue_indexer_server.Models;
 using issue_indexer_server.Data;
 using issue_indexer_server.Models.DTO;
+using Microsoft.AspNetCore.Identity;
 
 namespace issue_indexer_server.Controllers {
 
@@ -15,9 +16,11 @@ namespace issue_indexer_server.Controllers {
     public class UsersController : ControllerBase {
 
         private readonly IssueIndexerContext _context;
+        private readonly UserManager<User> _userManager;
 
-        public UsersController(IssueIndexerContext context) {
+        public UsersController(IssueIndexerContext context, UserManager<User> userManager) {
             _context = context;
+            _userManager = userManager;
         }
 
         // GET: api/Users?userId=1&superiors=1 -> returns a user's superiors
@@ -220,22 +223,29 @@ namespace issue_indexer_server.Controllers {
         [HttpPost]
         [ActionName("User")]
         public async Task<ActionResult<User>> PostUser(User user) {
-            var userInDB = _context.Users.SingleOrDefault(x => x.Email.Equals(user.Email));
-            if (userInDB != null) {
-                if (userInDB.Email.Equals(user.Email)) return Ok();
-            } else {
-                user.JoinedOn = DateTime.UtcNow;
-                user.AccountType = 0;
-                _context.Users.Add(user);
-                try {
-                    await _context.SaveChangesAsync();
-                    return StatusCode(204);
-                } catch (Exception) {
-                    return Conflict();
+            try {
+                // Checks if user exists
+                var userInDB = _context.Users.SingleOrDefault(x => x.Email.Equals(user.Email));
+                // If they exist, attempt login
+                if (userInDB != null) {
+                    // user.PasswordHash stores the actual password -> needs changing
+                    var loginSuccess = await _userManager.CheckPasswordAsync(userInDB, user.PasswordHash);
+                    if (loginSuccess) return Ok();
+                } else {
+                    // If user doesn't exist (and has the required fields), create the user
+                    if (user.FirstName == null || user.LastName == null || user.Email == null) return Conflict();
+                    // Sets fields to prevent overposting
+                    user.JoinedOn = DateTime.UtcNow;
+                    user.AccountType = 0;
+                    _context.Users.Add(user);
+                    var registerSuccess = await _userManager.CreateAsync(user, user.PasswordHash);
+                    if (registerSuccess.Succeeded) return StatusCode(204);
                 }
-            }
 
-            return Conflict();
+                return Conflict();
+            } catch (Exception) {
+                return BadRequest();
+            }
         }
 
         // DELETE: api/Users/5

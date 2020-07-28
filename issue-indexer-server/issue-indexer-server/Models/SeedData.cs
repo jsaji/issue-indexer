@@ -5,37 +5,50 @@ using System.Threading.Tasks;
 using issue_indexer_server.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace issue_indexer_server.Data {
 
     public class SeedData {
 
         public static void Initialize(IServiceProvider serviceProvider) {
-            using (var context = new IssueIndexerContext(
-                serviceProvider.GetRequiredService<DbContextOptions<IssueIndexerContext>>())) {
-                context.Users.AddRange(
-                    new User {
-                        FirstName = "Jay",
-                        LastName = "Gray",
-                        Email = "jay@cool.com",
-                        JoinedOn = DateTime.UtcNow,
-                        AccountType = 2
-                    },
-                    new User {
-                        FirstName = "Kayt",
-                        LastName = "E",
-                        Email = "Kayt@cool.com",
-                        JoinedOn = DateTime.UtcNow,
-                        AccountType = 1
-                    },
-                    new User {
-                        FirstName = "Pete",
-                        LastName = "S",
-                        Email = "Pete@cool.com",
-                        JoinedOn = DateTime.UtcNow,
-                        AccountType = 0
-                    }
-                );
+            var context = new IssueIndexerContext(
+                serviceProvider.GetRequiredService<DbContextOptions<IssueIndexerContext>>());
+            var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
+
+            using (userManager)
+            using (context) {
+                
+                userManager.CreateAsync(new User {
+                    UserName = "JayG",
+                    FirstName = "Jay",
+                    LastName = "Gray",
+                    Email = "jay@cool.com",
+                    JoinedOn = DateTime.UtcNow,
+                    AccountType = 2
+                }, "Password1!"
+                ).GetAwaiter().GetResult();
+                userManager.CreateAsync(new User {
+                    UserName = "Kayte",
+                    FirstName = "Kayt",
+                    LastName = "E",
+                    Email = "Kayt@cool.com",
+                    JoinedOn = DateTime.UtcNow,
+                    AccountType = 1
+                }, "Password1!"
+                ).GetAwaiter().GetResult();
+                userManager.CreateAsync(new User {
+                    UserName = "Petey",
+                    FirstName = "Pete",
+                    LastName = "S",
+                    Email = "Pete@cool.com",
+                    JoinedOn = DateTime.UtcNow,
+                    AccountType = 0
+                }, "Password1!"
+                ).GetAwaiter().GetResult();
+
+
                 context.Projects.AddRange(
                     new Project {
                         Name = "Coolio 1",
@@ -129,7 +142,6 @@ namespace issue_indexer_server.Data {
                     }
                 );
                 context.SaveChanges();
-
             }
         }
     }
