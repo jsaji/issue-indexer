@@ -56,5 +56,6 @@ namespace issue_indexer_server.Controllers {
         public static async Task<bool> UserExists(IssueIndexerContext _context, uint userId) {
             return await _context.Users.AnyAsync(e => e.Id == userId);
         }
+        
     }
 }

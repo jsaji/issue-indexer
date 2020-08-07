@@ -21,7 +21,7 @@ namespace issue_indexer_server.Data {
             using (context) {
                 
                 userManager.CreateAsync(new User {
-                    UserName = "JayG",
+                    UserName = "jay@cool.com".ToUpper(),
                     FirstName = "Jay",
                     LastName = "Gray",
                     Email = "jay@cool.com",
@@ -30,7 +30,7 @@ namespace issue_indexer_server.Data {
                 }, "Password1!"
                 ).GetAwaiter().GetResult();
                 userManager.CreateAsync(new User {
-                    UserName = "Kayte",
+                    UserName = "Kayt@cool.com".ToUpper(),
                     FirstName = "Kayt",
                     LastName = "E",
                     Email = "Kayt@cool.com",
@@ -39,7 +39,7 @@ namespace issue_indexer_server.Data {
                 }, "Password1!"
                 ).GetAwaiter().GetResult();
                 userManager.CreateAsync(new User {
-                    UserName = "Petey",
+                    UserName = "Pete@cool.com".ToUpper(),
                     FirstName = "Pete",
                     LastName = "S",
                     Email = "Pete@cool.com",

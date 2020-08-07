@@ -220,33 +220,50 @@ namespace issue_indexer_server.Controllers {
         // POST: api/Users
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
-        [HttpPost]
-        [ActionName("User")]
-        public async Task<ActionResult<User>> PostUser(User user) {
+        [HttpPost("login")]
+        public async Task<ActionResult<User>> PostUser(LoginModel user) {
             try {
                 // Checks if user exists
-                var userInDB = _context.Users.SingleOrDefault(x => x.Email.Equals(user.Email));
+                user.Email = user.Email.ToUpper();
+                var userInDB = _context.Users.SingleOrDefault(x => x.NormalizedEmail.Equals(user.Email));
                 // If they exist, attempt login
-                if (userInDB != null) {
-                    // user.PasswordHash stores the actual password -> needs changing
-                    var loginSuccess = await _userManager.CheckPasswordAsync(userInDB, user.PasswordHash);
-                    if (loginSuccess) return Ok();
-                } else {
-                    // If user doesn't exist (and has the required fields), create the user
-                    if (user.FirstName == null || user.LastName == null || user.Email == null) return Conflict();
-                    // Sets fields to prevent overposting
-                    user.JoinedOn = DateTime.UtcNow;
-                    user.AccountType = 0;
-                    _context.Users.Add(user);
-                    var registerSuccess = await _userManager.CreateAsync(user, user.PasswordHash);
-                    if (registerSuccess.Succeeded) return StatusCode(204);
-                }
+                var loginSuccess = await _userManager.CheckPasswordAsync(userInDB, user.Password);
+                if (loginSuccess) return Ok();
+                
+                return Conflict();
+            } catch (Exception) {
+                return BadRequest();
+            }
+        }
+
+        [HttpPost("register")]
+        public async Task<ActionResult<User>> PostUser(RegisterModel user) {
+            try {
+                // Checks if user exists
+                var normalised_email = user.Email.ToUpper();
+                var userInDB = _context.Users.SingleOrDefault(x => x.NormalizedEmail.Equals(normalised_email));
+                if (userInDB != null) return Conflict();
+
+                // If user doesn't exist (and has the required fields), create the user
+                if (user.FirstName == null || user.LastName == null || user.Email == null) return Conflict();
+                var newUser = new User() {
+                    UserName = user.Email,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Email = user.Email,
+                    JoinedOn = DateTime.UtcNow,
+                    AccountType = 0
+                };
+
+                var registerSuccess = await _userManager.CreateAsync(newUser, user.Password);
+                if (registerSuccess.Succeeded) return StatusCode(204);
 
                 return Conflict();
             } catch (Exception) {
                 return BadRequest();
             }
         }
+
 
         // DELETE: api/Users/5
         [HttpDelete("{userId}")]
