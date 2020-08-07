@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -23,5 +24,15 @@ namespace issue_indexer_client.Models {
         [EmailAddress(ErrorMessage = "Invalid email address")]
         public string Email { get; set; }
 
+        [Required(ErrorMessage = "Password field is required")]
+        [DataType(DataType.Password)]
+        public string Password { get; set; }
+
+        [Required(ErrorMessage = "Password does not match")]
+        [Display(Name = "Confirm Password")]
+        [NotMapped]
+        [Compare("Password")]
+        [DataType(DataType.Password)]
+        public string ConfirmPassword { get; set; }
     }
 }

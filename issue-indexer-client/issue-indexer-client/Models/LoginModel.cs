@@ -11,5 +11,8 @@ namespace issue_indexer_client.Models {
         [EmailAddress(ErrorMessage = "Invalid email address")]
         public string Email { get; set; }
 
+        [Required(ErrorMessage = "Password field is required")]
+        [DataType(DataType.Password)]
+        public string Password { get; set; }
     }
 }
